@@ -64,16 +64,26 @@ Verified from the Module 4 source (not assumed):
 | Database | **PostgreSQL 16**, self-hosted on EC2 (not RDS) | `nexora` DB, `nexora_app` role |
 | Reverse proxy | **Nginx** on the web tier, `/api/` → backend:3000 | |
 | Process manager | **systemd** (`nexora-backend.service`) | |
-| Cloud | AWS, 3 × Ubuntu 24.04 EC2 across public/private subnets | |
+| Cloud (Module 4) | AWS, 3 × Ubuntu 24.04 EC2 across public/private subnets | |
 
-Deployment topology:
+Module 4 is a three-tier application. **Module 6 deploys all of those tiers on one
+dedicated EC2 instance** (the assignment's one-EC2 architecture), with each tier
+isolated as a container on a shared Docker network:
 
 ```text
-Internet ──HTTPS──▶ [ Web tier: Nginx + React ] 10.30.1.217 (public)
-                          │ /api/ → TCP 3000
-                     [ App tier: Rust/Axum ] 10.30.2.82 (private)
-                          │ PostgreSQL 5432
-                     [ DB tier: PostgreSQL 16 ] 10.30.3.195 (private)
+Internet ──HTTP/HTTPS──▶ [ Single EC2: c7i-flex.large, 3.25.110.229 ]
+                          │
+                          ├─ nginx (reverse proxy, :80)
+                          ├─ frontend (React build, nginx)
+                          ├─ backend (Rust/Axum, :3000, /metrics)
+                          ├─ postgres (PostgreSQL 16, :5432)
+                          └─ nexora-monitoring network
+                               ├─ prometheus :9090 (loopback)
+                               ├─ grafana :3000 (admin IP only)
+                               ├─ alertmanager :9093 (loopback)
+                               ├─ node-exporter :9100
+                               ├─ postgres-exporter :9187
+                               └─ blackbox-exporter :9115
 ```
 
 Full analysis and integration strategy: [`docs/nexora-integration.md`](docs/nexora-integration.md).
@@ -103,8 +113,8 @@ Details: [`docs/architecture.md`](docs/architecture.md).
 
 ```text
                       ┌───────────────────────┐
-   Nexora web tier ──▶│  nexora-monitoring     │
-   (Docker Compose)   │  prometheus :9090      │──┐
+   Nexora EC2 host ──▶│  nexora-monitoring     │
+   (single, Compose)  │  prometheus :9090      │──┐
                       │  grafana    :3000      │  │ scrape (pull)
                       │  alertmanager :9093    │  │
                       │  node-exporter         │  │
@@ -353,22 +363,21 @@ Services: `prometheus`, `grafana`, `alertmanager`, `node-exporter`,
 - **PR to `main`:** validates Prometheus config/rules, Alertmanager, Compose,
   dashboard JSON, YAML, shell, secrets, and workflow syntax (actionlint). Fails on
   invalid config.
-- **Push to `main`:** validate → SSH deploy → render → `up -d` → reload → health-check.
+- **Push to `main`:** validate → deploy on the self-hosted runner → render → `up -d`
+  → reload → health-check (with retry).
 
 Details: [`docs/cicd.md`](docs/cicd.md).
 
-## 19. Required GitHub Secrets
+## 19. Deployment credentials
 
-| Secret | Purpose |
-|---|---|
-| `DEPLOY_HOST` | Deployment server host/IP |
-| `DEPLOY_USER` | SSH user |
-| `DEPLOY_PORT` | SSH port |
-| `DEPLOY_PATH` | Repo path on the server |
-| `DEPLOY_SSH_KEY` | Private SSH key |
+The deployment job runs on a **self-hosted GitHub Actions runner installed on the
+EC2 host**, so no inbound SSH port or SSH private key is exposed to GitHub. The
+runner is registered with the labels `self-hosted`, `linux`, `x64`.
 
 Runtime secrets (Telegram, SMTP, DB DSN, Grafana password) live in the server's
-git-ignored `.env.deploy`.
+git-ignored `.env.deploy`, never in git. If you switch back to an SSH-based
+deployment, the historical `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_PORT` /
+`DEPLOY_PATH` / `DEPLOY_SSH_KEY` secrets can be used instead.
 
 ## 20. Configuration validation
 
@@ -480,9 +489,26 @@ How this project avoids it:
 
 ## 24. Evidence / screenshots
 
-PART A contains no runtime screenshots (nothing is deployed yet). PART B captures
-Prometheus targets, PromQL queries, both Grafana dashboards, alert firing/resolved,
-Telegram delivery, and CI runs. Checklist: [`screenshots/README.md`](screenshots/README.md).
+The stack was deployed and verified end to end on the dedicated EC2
+(`3.25.110.229`). Reproducible command output is captured in
+[`docs/evidence.md`](docs/evidence.md); browser screenshots are the remaining
+user-only item.
+
+| Item | Result |
+|---|---|
+| App | http://3.25.110.229/ · `/health` 200 · `/ready` 200 |
+| Grafana | http://3.25.110.229:3000 (admin IP only) |
+| Prometheus | `127.0.0.1:9090` via SSH tunnel |
+| Targets | 6/6 `up` |
+| Community dashboard | Node Exporter Full (ID 1860) imported |
+| Custom dashboard | `Three-Tier App - Production` (uid `nexora-three-tier-prod`) |
+| Datasource | `Prometheus` health `OK` |
+| Alert test | `NexoraDatabaseDown` fired → resolved after restore |
+| Notification test | webhook firing + resolved payloads received |
+| CI successful run | https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905336129 |
+| CI failed run | https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905470131 |
+
+Browser screenshots still needed: see [`screenshots/README.md`](screenshots/README.md).
 
 ## 25. References
 
@@ -500,43 +526,28 @@ Telegram delivery, and CI runs. Checklist: [`screenshots/README.md`](screenshots
 
 ---
 
-## PART B — Manual Work Checklist
+## PART B — Status
 
-Everything below is **pending** and must be done manually during PART B. Nothing in
-PART A performs these actions.
+### Completed automatically during PART B
+- [x] AWS infrastructure provisioned (VPC, subnet, IGW, SG, one EC2).
+- [x] Nexora app deployed; backend instrumentation patch applied; `/metrics` verified.
+- [x] `nexora_monitoring` least-privilege role created.
+- [x] Monitoring stack deployed; **6/6 targets UP**.
+- [x] Three PromQL queries executed (results in `docs/evidence.md`).
+- [x] Community dashboard 1860 imported; custom dashboard provisioned.
+- [x] Grafana datasource health `OK`.
+- [x] DB-outage alert test: `NexoraDatabaseDown` fired, then resolved after restore.
+- [x] Webhook firing + resolved notifications received.
+- [x] Self-hosted runner installed; successful CI run **44905336129** (validate + deploy).
+- [x] Intentional invalid-config PR run **44905470131** failed as expected; branch deleted.
 
-### Deployment & infrastructure
-- [ ] Apply `integration/backend/nexora-prometheus.patch` to the Module 4 backend and rebuild/restart it.
-- [ ] Create the `nexora_monitoring` PostgreSQL role (`exporters/postgres-monitor-role.sql`).
-- [ ] Confirm/adjust security groups so the monitoring host can reach backend:3000 and the DB.
-- [ ] Populate the server `.env.deploy` with real targets, DSN, Grafana password, Telegram/SMTP.
-- [ ] Deploy the stack (`docker compose up -d` / `./scripts/deploy.sh`).
-
-### Verification evidence
-- [ ] Prometheus **Status → Targets**: all targets `UP` (`screenshots/prometheus/01-targets-up.png`).
-- [ ] Run the three PromQL queries in Explore (`screenshots/prometheus/02..04`).
-- [ ] Confirm the provisioned Prometheus data source (`screenshots/grafana/03-datasource.png`).
-- [ ] Open `Three-Tier App - Production` and confirm all rows/panels populate (`screenshots/grafana/01-three-tier-dashboard.png`).
-- [ ] Import `Node Exporter Full` (1860) (`screenshots/grafana/02-community-node-exporter.png`).
-- [ ] Alertmanager shows loaded rules/receivers (`screenshots/alerting/01-alertmanager-ui.png`).
-
-### Alerting
-- [ ] Configure Telegram bot token + chat id and restart Alertmanager.
-- [ ] Trigger a real alert (stop backend / break frontend probe) and capture firing (`screenshots/alerting/02-alert-firing.png`).
-- [ ] Confirm the Telegram message arrives (`screenshots/alerting/03-telegram-notification.png`).
-- [ ] Resolve the condition and capture the resolved notification (`screenshots/alerting/04-alert-resolved.png`).
-
-### CI/CD
-- [ ] Configure the `DEPLOY_*` GitHub Secrets.
-- [ ] Capture a successful **Validate configuration** run (`screenshots/github-actions/01-successful-run.png`).
-- [ ] Create a throwaway branch with invalid config, capture the failed run, then delete the branch (`screenshots/github-actions/02-failed-run.png`).
-- [ ] Push to `main` and capture the deploy run (`screenshots/github-actions/03-deploy-run.png`).
-
-### Final
-- [ ] Complete all screenshots and update this checklist.
-- [ ] Submit the repository URL and evidence.
+### Remaining user-only actions
+- [ ] Provide a Telegram bot token + chat id and re-run the alert test to capture real Telegram delivery.
+- [ ] Capture the browser screenshots listed in `screenshots/README.md` (targets, PromQL, datasource, both dashboards, alert firing/resolved, notification, CI runs).
+- [ ] Optionally restrict the admin IP / add TLS in front of Grafana.
+- [ ] Final review and submission.
 
 ---
 
-**PART A status:** implementation, documentation, and local validation complete.
-Runtime deployment, notification delivery, and screenshots are **pending PART B**.
+**Status:** PART A + automated PART B complete. Remaining items are user-only
+(Telegram credentials, browser screenshots, final review).

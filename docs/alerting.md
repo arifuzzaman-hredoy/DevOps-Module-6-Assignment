@@ -128,5 +128,19 @@ the environment (`.env` on the server, GitHub Secrets in CI):
 
   Then resolve it and confirm the resolved notification.
 
-> Runtime firing/resolved evidence is captured in PART B and stored under
-> `screenshots/alerting/`.
+## 6. Notification delivery verification
+
+Because Telegram credentials are user-only, `scripts/test-notification.sh` sends a
+synthetic `severity="test"` alert to a local webhook receiver
+(`scripts/webhook_listener.py`) and captures the firing and resolved payloads. The
+actual run received **2 firing + 2 resolved** webhook payloads (see
+[`evidence.md`](evidence.md) §6), proving Alertmanager routing, grouping, and
+`send_resolved` work end to end. Telegram delivery remains pending the user's bot
+token and chat id.
+
+## 7. Alert rule test
+
+`scripts/test-alerting.sh` deliberately stops PostgreSQL, generates 503 traffic, and
+captures the result. Actual result: `NexoraDatabaseDown` fired (critical), the backend
+5xx error ratio reached ≈ 33.8%, and the alert resolved after PostgreSQL was restored
+(see [`evidence.md`](evidence.md) §5).

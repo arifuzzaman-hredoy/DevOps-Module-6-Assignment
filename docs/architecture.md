@@ -4,8 +4,11 @@
 
 The monitoring stack observes the existing Nexora three-tier application using a
 Prometheus-centric, pull-based metrics pipeline with Grafana visualization and
-Alertmanager notifications. It runs as an isolated Docker Compose project on the Nexora
-web tier and does not alter the application.
+Alertmanager notifications. For this assignment, the Nexora application (frontend,
+backend, PostgreSQL) and the monitoring stack all run on **one dedicated EC2
+instance**; the application tiers are isolated as Docker Compose services on a shared
+`nexora-net` network. Node Exporter therefore monitors that single host, not three
+separate servers.
 
 ## 2. Component diagram
 

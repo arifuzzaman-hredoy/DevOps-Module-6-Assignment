@@ -34,29 +34,23 @@ configuration is detected".
 ## 3. Deploy job (push to main)
 
 Runs only on `push` to `main`, after `validate` succeeds, in the `production`
-environment. It connects to the deployment server over SSH using GitHub Secrets and
-runs the repository's own `scripts/deploy.sh` (render → pull → up → reload →
-health-check). If the deploy secrets are not configured, the job prints a notice and
-exits successfully (so a fresh fork does not fail).
+environment, on a **self-hosted GitHub Actions runner installed on the EC2 host**
+(labels `self-hosted`, `linux`, `x64`). The job updates `/opt/nexora/monitoring` to
+`origin/main` and runs the repository's own `scripts/deploy.sh` (render → pull → up →
+reload → health-check with retry).
 
-## 4. Required GitHub Secrets
+A self-hosted runner is used instead of SSH because GitHub-hosted runners use
+thousands of dynamic Azure IP ranges that cannot be enumerated in a security group.
+This keeps inbound SSH closed.
 
-Configure these in **Settings → Secrets and variables → Actions** (repository) or in
-the `production` environment:
+## 4. Deployment credentials
 
-| Secret | Purpose |
-|---|---|
-| `DEPLOY_HOST` | Deployment server hostname or IP (e.g. the Nexora web tier) |
-| `DEPLOY_USER` | SSH user |
-| `DEPLOY_PORT` | SSH port (default 22) |
-| `DEPLOY_PATH` | Absolute path to this repository on the server |
-| `DEPLOY_SSH_KEY` | Private SSH key (PEM/OpenSSH) with access to the server |
+Runtime secrets (Telegram token, SMTP, DB DSN, Grafana password) live in the server's
+git-ignored `.env.deploy`, never in git. The self-hosted runner executes locally on the
+EC2, so no `DEPLOY_*` SSH secrets are required.
 
-On the server, the runtime secrets (Telegram token, SMTP, DB DSN, Grafana password)
-live in `.env.deploy`, which is git-ignored and never committed.
-
-> Do not put server IPs or credentials in public files. The workflow reads them only
-> from GitHub Secrets.
+> Do not put server IPs or credentials in public files. Runtime secrets stay in
+> `.env.deploy` on the server.
 
 ## 5. Failure-testing preparation
 

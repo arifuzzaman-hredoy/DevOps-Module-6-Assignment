@@ -4,6 +4,11 @@ This document records the **actual** architecture of the existing Module 4 Nexor
 application (verified from source, not assumed) and explains exactly how the Module 6
 monitoring stack integrates with it without modifying or breaking it.
 
+> **Module 6 deployment model:** the three Module 4 tiers are deployed on **one
+> dedicated EC2 instance** (not three) as separate Docker Compose services on a
+> shared `nexora-net` network. The 3-EC2 topology in §1 documents the original
+> Module 4 AWS design for reference; the actual Module 6 layout is in §6.
+
 ## 1. Verified Module 4 architecture
 
 Source of truth: the Module 4 repository
@@ -129,3 +134,21 @@ All addresses are environment variables in `.env` (see `.env.example`).
 - No Nexora containers, systemd units, Nginx config, or database data are touched.
 - The monitoring stack uses its own Compose project name, network, volumes, and
   container names (`nexora-prometheus`, `nexora-grafana`, ...) to avoid collisions.
+
+## 6. Module 6 single-EC2 deployment
+
+All tiers run on one EC2 (`c7i-flex.large`, public IP `3.25.110.229`) using Docker
+Compose:
+
+- **`nexora-local` project** — `postgres`, `backend`, `frontend`, `nginx`, all
+  joined to the shared external `nexora-net` network. Nginx publishes `:80`.
+- **`nexora-monitoring` project** — `prometheus`, `grafana`, `alertmanager`,
+  `node-exporter`, `postgres-exporter`, `blackbox-exporter`.
+- Scrape targets use service names: `backend:3000` (metrics), `postgres:5432`
+  (exporter), `frontend:80/healthz` and `backend:3000/ready` (blackbox).
+- Node Exporter monitors the single EC2 host.
+- UIs: Grafana on `0.0.0.0:3000` (security group restricted to the admin /24);
+  Prometheus and Alertmanager on `127.0.0.1` (SSH tunnel only).
+
+The backend instrumentation patch is applied to `/opt/nexora/app/backend`, the image
+is rebuilt, and Prometheus scrapes `/metrics` over `nexora-net`.

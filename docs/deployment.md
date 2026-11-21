@@ -1,7 +1,12 @@
 # Deployment Guide
 
-This guide covers running the monitoring stack locally and on the Nexora web tier.
-**PART A does not deploy anything**; these are the steps for PART B.
+This guide covers running the monitoring stack locally and on the single dedicated
+EC2 used for this assignment.
+
+> **Single-EC2 deployment:** the Nexora app (frontend, backend, PostgreSQL) and the
+> monitoring stack run on one EC2 host. Grafana is exposed on `0.0.0.0:3000`
+> (security-group restricted to the admin IP), while Prometheus and Alertmanager stay
+> on `127.0.0.1` and are accessed via SSH tunnel. Node Exporter monitors this host.
 
 ## 1. Prerequisites
 
