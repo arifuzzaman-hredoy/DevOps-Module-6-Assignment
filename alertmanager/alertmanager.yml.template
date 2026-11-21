@@ -22,6 +22,11 @@ route:
   repeat_interval: 4h
   routes:
     - matchers:
+        - severity="test"
+      receiver: 'webhook-test'
+      group_wait: 0s
+      repeat_interval: 1m
+    - matchers:
         - severity="critical"
       receiver: 'telegram'
       group_wait: 10s
@@ -60,6 +65,13 @@ receivers:
           {{ if .Annotations.description }}{{ .Annotations.description }}{{ end }}
           instance: {{ .Labels.instance }}
           {{ end }}
+
+  # --- Test-only channel: proves routing and send_resolved end to end -------
+  # Used by scripts/test-notification.sh; not part of production routing.
+  - name: 'webhook-test'
+    webhook_configs:
+      - url: 'http://host.docker.internal:5000/webhook'
+        send_resolved: true
 
   # --- Optional secondary channel: SMTP email -------------------------------
   # Not referenced by any route by default. To enable, add a route entry with

@@ -96,6 +96,8 @@ services:
       - "${ALERTMANAGER_BIND_ADDRESS:-127.0.0.1}:${ALERTMANAGER_PORT:-9093}:9093"
     networks:
       - monitoring
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9093/-/healthy"]
       interval: 15s
