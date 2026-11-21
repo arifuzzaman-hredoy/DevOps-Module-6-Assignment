@@ -1,0 +1,23 @@
+# Normalize line endings so shell scripts, patches, and configs always use LF.
+# This prevents "\r" errors when running scripts in WSL/Linux after a Windows checkout.
+* text=auto eol=lf
+
+# Explicit text types
+*.sh    text eol=lf
+*.py    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.sql   text eol=lf
+*.toml  text eol=lf
+*.patch text eol=lf
+*.template text eol=lf
+
+# Binary types
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

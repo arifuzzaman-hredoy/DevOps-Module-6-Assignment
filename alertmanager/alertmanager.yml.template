@@ -1,0 +1,75 @@
+# =============================================================================
+# Alertmanager configuration template.
+# Rendered to alertmanager/alertmanager.yml by scripts/render_config.py.
+# Placeholder references are substituted from .env at render/deploy time.
+# Secrets (bot token, SMTP password) come from the environment, never from git.
+# =============================================================================
+global:
+  resolve_timeout: ${ALERTMANAGER_RESOLVE_TIMEOUT}
+  smtp_smarthost: '${SMTP_SMARTHOST}'
+  smtp_from: '${SMTP_FROM}'
+  smtp_auth_username: '${SMTP_AUTH_USERNAME}'
+  smtp_auth_password: '${SMTP_AUTH_PASSWORD}'
+  smtp_require_tls: ${SMTP_REQUIRE_TLS}
+
+# The default route sends everything to Telegram. A faster child route is used
+# for critical alerts (shorter group_wait / repeat_interval).
+route:
+  receiver: 'telegram'
+  group_by: ['alertname', 'tier', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: 'telegram'
+      group_wait: 10s
+      group_interval: 2m
+      repeat_interval: 1h
+
+# Inhibit noisy downstream alerts when an upstream cause is already firing.
+inhibit_rules:
+  # If the whole host is down, do not also page for every service on it.
+  - source_matchers:
+      - 'alertname="NexoraNodeExporterDown"'
+    target_matchers:
+      - 'severity=~"warning|critical"'
+    equal: ['instance']
+
+  # If the database is down, suppress connection-saturation warnings.
+  - source_matchers:
+      - 'alertname="NexoraDatabaseDown"'
+    target_matchers:
+      - 'alertname="NexoraDatabaseConnectionsHigh"'
+    equal: ['instance']
+
+receivers:
+  # --- Preferred channel: Telegram -------------------------------------------
+  - name: 'telegram'
+    telegram_configs:
+      - bot_token: '${TELEGRAM_BOT_TOKEN}'
+        chat_id: ${TELEGRAM_CHAT_ID}
+        api_url: 'https://api.telegram.org'
+        send_resolved: true
+        message: |-
+          [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]
+          {{ range .Alerts }}
+          *{{ .Labels.alertname }}* ({{ .Labels.severity }})
+          {{ .Annotations.summary }}
+          {{ if .Annotations.description }}{{ .Annotations.description }}{{ end }}
+          instance: {{ .Labels.instance }}
+          {{ end }}
+
+  # --- Optional secondary channel: SMTP email -------------------------------
+  # Not referenced by any route by default. To enable, add a route entry with
+  # `receiver: 'email'` (see docs/alerting.md).
+  - name: 'email'
+    email_configs:
+      - to: '${SMTP_TO}'
+        from: '${SMTP_FROM}'
+        smarthost: '${SMTP_SMARTHOST}'
+        auth_username: '${SMTP_AUTH_USERNAME}'
+        auth_password: '${SMTP_AUTH_PASSWORD}'
+        require_tls: ${SMTP_REQUIRE_TLS}
+        send_resolved: true

@@ -1,0 +1,21 @@
+# Secrets and local environment files (never commit real values)
+.env
+.env.*
+!.env.example
+*.local
+
+# Rendered runtime configuration produced by scripts/render_config.py
+/prometheus/prometheus.yml
+/alertmanager/alertmanager.yml
+
+# Local validator/tool cache
+/.cache/
+
+# Grafana community dashboard export (fetched at deploy time, not redistributed)
+/grafana/dashboards/community-dashboard.json
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*~

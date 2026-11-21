@@ -1,0 +1,175 @@
+# =============================================================================
+# Prometheus alerting rules for the Nexora three-tier application.
+# Validated with: promtool check rules prometheus/rules/alerts.yml
+# =============================================================================
+groups:
+  # ---------------------------------------------------------------------------
+  # 1. Availability - any monitored tier becoming unavailable
+  # ---------------------------------------------------------------------------
+  - name: nexora-availability
+    rules:
+      - alert: NexoraBackendDown
+        expr: up{job="nexora-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          tier: backend
+        annotations:
+          summary: "Nexora backend API is down ({{ $labels.instance }})"
+          description: "Prometheus has failed to scrape the Nexora backend /metrics endpoint for more than 2 minutes."
+
+      - alert: NexoraFrontendDown
+        expr: probe_success{job="blackbox-frontend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          tier: frontend
+        annotations:
+          summary: "Nexora frontend is unreachable ({{ $labels.instance }})"
+          description: "Blackbox HTTP probe against the public frontend has failed for more than 2 minutes."
+
+      - alert: NexoraDatabaseDown
+        expr: pg_up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          tier: database
+        annotations:
+          summary: "Nexora PostgreSQL database is down ({{ $labels.instance }})"
+          description: "postgres_exporter cannot reach PostgreSQL (pg_up == 0) for more than 2 minutes."
+
+      - alert: NexoraNodeExporterDown
+        expr: up{job="node"} == 0
+        for: 3m
+        labels:
+          severity: warning
+          tier: server
+        annotations:
+          summary: "Node Exporter is unreachable ({{ $labels.instance }})"
+          description: "Prometheus cannot scrape the Node Exporter for more than 3 minutes; host metrics are stale."
+
+      - alert: NexoraBackendHealthProbeFailing
+        expr: probe_success{job="blackbox-backend"} == 0
+        for: 3m
+        labels:
+          severity: warning
+          tier: backend
+        annotations:
+          summary: "Nexora backend health probe is failing ({{ $labels.instance }})"
+          description: "The /ready health probe has been failing for more than 3 minutes even if /metrics is still reachable."
+
+  # ---------------------------------------------------------------------------
+  # 2. Backend API error rate and latency
+  # ---------------------------------------------------------------------------
+  - name: nexora-api-performance
+    rules:
+      - alert: NexoraBackendHighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job="nexora-backend", status=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(http_requests_total{job="nexora-backend"}[5m])), 1e-9)
+          ) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          tier: backend
+        annotations:
+          summary: "Nexora backend 5xx error rate above 5% ({{ $labels.instance }})"
+          description: "More than 5% of backend HTTP responses have been 5xx for the last 10 minutes (value={{ $value | humanizePercentage }})."
+
+      - alert: NexoraBackendCriticalErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job="nexora-backend", status=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(http_requests_total{job="nexora-backend"}[5m])), 1e-9)
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: critical
+          tier: backend
+        annotations:
+          summary: "Nexora backend 5xx error rate above 10% ({{ $labels.instance }})"
+          description: "More than 10% of backend HTTP responses have been 5xx for the last 5 minutes (value={{ $value | humanizePercentage }})."
+
+      - alert: NexoraBackendHighLatency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(http_request_duration_seconds_bucket{job="nexora-backend"}[5m]))
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+          tier: backend
+        annotations:
+          summary: "Nexora backend p95 latency above 1s ({{ $labels.instance }})"
+          description: "The 95th percentile HTTP request latency has exceeded 1 second for the last 10 minutes (value={{ $value }}s)."
+
+  # ---------------------------------------------------------------------------
+  # 3. Database saturation
+  # ---------------------------------------------------------------------------
+  - name: nexora-database
+    rules:
+      - alert: NexoraDatabaseConnectionsHigh
+        expr: |
+          (
+            sum(pg_stat_database_numbackends{job="postgres"})
+            /
+            clamp_min(
+              sum(pg_settings_max_connections{job="postgres"})
+              - sum(pg_settings_superuser_reserved_connections{job="postgres"}),
+              1
+            )
+          ) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          tier: database
+        annotations:
+          summary: "Nexora database connections above 80% ({{ $labels.instance }})"
+          description: "Database connection usage has exceeded 80% of the available (non-reserved) connection limit for 10 minutes."
+
+  # ---------------------------------------------------------------------------
+  # 4. Server resource usage (Node Exporter)
+  # ---------------------------------------------------------------------------
+  - name: nexora-resources
+    rules:
+      - alert: NexoraHighCpuUsage
+        expr: |
+          100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle", job="node"}[5m])) * 100) > 85
+        for: 10m
+        labels:
+          severity: warning
+          tier: server
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU utilisation has been above 85% for the last 10 minutes (value={{ $value }}%)."
+
+      - alert: NexoraHighMemoryUsage
+        expr: |
+          (
+            1 - node_memory_MemAvailable_bytes{job="node"} / node_memory_MemTotal_bytes{job="node"}
+          ) * 100 > 90
+        for: 10m
+        labels:
+          severity: warning
+          tier: server
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory utilisation has been above 90% for the last 10 minutes (value={{ $value }}%)."
+
+      - alert: NexoraLowDiskSpace
+        expr: |
+          (
+            node_filesystem_avail_bytes{job="node", mountpoint="/", fstype!~"tmpfs|overlay|squashfs"}
+            / node_filesystem_size_bytes{job="node", mountpoint="/", fstype!~"tmpfs|overlay|squashfs"}
+          ) * 100 < 15
+        for: 10m
+        labels:
+          severity: warning
+          tier: server
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }} ({{ $labels.mountpoint }})"
+          description: "Less than 15% of the root filesystem is free for the last 10 minutes (value={{ $value }}% free)."

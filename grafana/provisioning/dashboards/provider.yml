@@ -1,0 +1,15 @@
+# Grafana dashboard provider provisioning.
+# Loads every JSON dashboard found in /var/lib/grafana/dashboards.
+apiVersion: 1
+
+providers:
+  - name: Nexora
+    orgId: 1
+    folder: Nexora
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

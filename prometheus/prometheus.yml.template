@@ -1,0 +1,86 @@
+# =============================================================================
+# Prometheus configuration template.
+# Rendered to prometheus/prometheus.yml by scripts/render_config.py.
+# Placeholder references are substituted from .env at render/deploy time.
+# =============================================================================
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: nexora-three-tier
+    environment: ${MONITORING_ENV}
+
+rule_files:
+  - rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  # --- Prometheus self-monitoring --------------------------------------------
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # --- Host / server metrics (Node Exporter) ---------------------------------
+  - job_name: node
+    static_configs:
+      - targets: ['${NODE_EXPORTER_TARGET}']
+        labels:
+          tier: server
+
+  # --- Database metrics (postgres_exporter) ----------------------------------
+  - job_name: postgres
+    static_configs:
+      - targets: ['${NEXORA_DB_EXPORTER_TARGET}']
+        labels:
+          tier: database
+
+  # --- Backend API application metrics (Rust/Axum /metrics) ------------------
+  - job_name: nexora-backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['${NEXORA_APP_METRICS_TARGET}']
+        labels:
+          tier: backend
+          service: nexora-api
+
+  # --- Frontend availability (Blackbox HTTP probe) ---------------------------
+  - job_name: blackbox-frontend
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets: ['${NEXORA_FRONTEND_PROBE_TARGET}']
+        labels:
+          tier: frontend
+          service: nexora-web
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # --- Backend API health probe (Blackbox HTTP probe) ------------------------
+  - job_name: blackbox-backend
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets: ['${NEXORA_BACKEND_PROBE_TARGET}']
+        labels:
+          tier: backend
+          service: nexora-api
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
