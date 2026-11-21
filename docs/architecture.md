@@ -10,6 +10,11 @@ instance**; the application tiers are isolated as Docker Compose services on a s
 `nexora-net` network. Node Exporter therefore monitors that single host, not three
 separate servers.
 
+Public access is through the host Nginx TLS reverse proxy (ports 80/443) with a
+Let's Encrypt certificate: `https://nexora.oxytumzone.com/` → app Nginx
+`127.0.0.1:8080`, and `https://grafananex.oxytumzone.com/` → Grafana `127.0.0.1:3000`.
+Prometheus, Alertmanager, PostgreSQL, and all exporters remain private.
+
 ## 2. Component diagram
 
 ```text

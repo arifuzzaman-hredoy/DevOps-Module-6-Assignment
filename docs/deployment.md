@@ -4,9 +4,25 @@ This guide covers running the monitoring stack locally and on the single dedicat
 EC2 used for this assignment.
 
 > **Single-EC2 deployment:** the Nexora app (frontend, backend, PostgreSQL) and the
-> monitoring stack run on one EC2 host. Grafana is exposed on `0.0.0.0:3000`
-> (security-group restricted to the admin IP), while Prometheus and Alertmanager stay
-> on `127.0.0.1` and are accessed via SSH tunnel. Node Exporter monitors this host.
+> monitoring stack run on one EC2 host. Grafana is exposed on `0.0.0.0:3000` but the
+> security group restricts it to the admin `/24`. Prometheus and Alertmanager stay on
+> `127.0.0.1` and are accessed via SSH tunnel. Node Exporter monitors this host.
+
+## Public domains and TLS
+
+The host Nginx is the public entry point (ports 80/443) and terminates TLS with a
+Let's Encrypt certificate:
+
+| Domain | Backend | URL |
+|---|---|---|
+| `nexora.oxytumzone.com` | app Nginx `127.0.0.1:8080` | `https://nexora.oxytumzone.com/` |
+| `grafananex.oxytumzone.com` | Grafana `127.0.0.1:3000` | `https://grafananex.oxytumzone.com/` |
+
+- Certificate SANs: `nexora.oxytumzone.com`, `grafananex.oxytumzone.com`.
+- Auto-renewal: `certbot.timer` (webroot `/var/www/html`).
+- HTTP requests return `301` to HTTPS.
+- Grafana login: username `admin`; the password is set on the server and never stored in git.
+- Prometheus, Alertmanager, PostgreSQL, and all exporter ports remain private.
 
 ## 1. Prerequisites
 

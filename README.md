@@ -498,15 +498,24 @@ How this project avoids it:
 ## 24. Evidence / screenshots
 
 The stack was deployed and verified end to end on the dedicated EC2
-(`3.25.110.229`). Reproducible command output is captured in
-[`docs/evidence.md`](docs/evidence.md), and genuine browser screenshots have been
-captured under [`screenshots/`](screenshots/).
+(`3.25.110.229`). Public access is through the host Nginx TLS reverse proxy:
+
+- **App:** `https://nexora.oxytumzone.com/` → app Nginx `127.0.0.1:8080`
+- **Grafana:** `https://grafananex.oxytumzone.com/` → Grafana `127.0.0.1:3000`
+  (login: `admin` + the password set securely on the server; never committed)
+- **Private:** Prometheus `127.0.0.1:9090`, Alertmanager `127.0.0.1:9093`,
+  PostgreSQL, and all exporters are not publicly exposed.
+
+Reproducible command output is in [`docs/evidence.md`](docs/evidence.md); genuine
+screenshots are under [`screenshots/`](screenshots/).
 
 | Item | Result |
 |---|---|
-| App | http://3.25.110.229/ · `/health` 200 · `/ready` 200 |
-| Grafana | http://3.25.110.229:3000 (admin IP only) |
-| Prometheus | `127.0.0.1:9090` via SSH tunnel |
+| App | `https://nexora.oxytumzone.com/` · `/healthz` 200 · `/health` 200 · `/ready` 200 |
+| Grafana | `https://grafananex.oxytumzone.com/` (TLS, Let's Encrypt) |
+| HTTP → HTTPS | 301 redirect for both domains |
+| SSL | Let's Encrypt, expires 2027-02-19, auto-renewal (certbot.timer) |
+| Prometheus | `127.0.0.1:9090` via SSH tunnel (private) |
 | Targets | 6/6 `up` |
 | Community dashboard | Node Exporter Full (ID 1860) imported |
 | Custom dashboard | `Three-Tier App - Production` (uid `nexora-three-tier-prod`) |

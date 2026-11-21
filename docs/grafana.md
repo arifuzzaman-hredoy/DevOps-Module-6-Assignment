@@ -9,6 +9,8 @@ dashboard or data source).
 
 - Service `grafana` (`grafana/grafana-oss:11.4.0`) in `docker-compose.yml`.
 - Published on `0.0.0.0:3000` in this deployment (admin `/24` only).
+- Public URL: `https://grafananex.oxytumzone.com/` — served through the host Nginx TLS reverse proxy.
+- `GF_SERVER_ROOT_URL=https://grafananex.oxytumzone.com/` and `GF_SERVER_DOMAIN=grafananex.oxytumzone.com` are set in the deployment override.
 - Admin credentials from `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` in `.env`.
 - Dashboards and database persist in the `nexora-monitoring-grafana-data` volume.
 - Provisioning is mounted read-only from `grafana/provisioning/`.
