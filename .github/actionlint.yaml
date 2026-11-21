@@ -1,0 +1,5 @@
+# Declare the custom label used by the self-hosted deployment runner so
+# actionlint does not report it as unknown.
+self-hosted:
+  labels:
+    - nexora
