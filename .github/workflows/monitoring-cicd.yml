@@ -53,4 +53,4 @@ jobs:
           cd /opt/nexora/monitoring
           git fetch --all
           git reset --hard origin/main
-          ENV_FILE=.env.deploy ./scripts/deploy.sh
+          ENV_FILE=.env.deploy bash scripts/deploy.sh
