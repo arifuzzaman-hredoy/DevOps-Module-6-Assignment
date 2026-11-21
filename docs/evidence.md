@@ -98,6 +98,12 @@ NexoraDatabaseDown | active | critical
 GET /ready -> {"status":"ready","service":"nexora-api"}
 ```
 
+This was re-verified against the **actual** `NexoraDatabaseDown` alert: during a
+controlled outage the Alertmanager UI/API showed the alert firing, and after recovery
+the Alertmanager API returned **0 alerts** while `/ready` returned
+`{"status":"ready"}`. See `screenshots/alerting/05-database-alert-firing.png` and
+`06-database-alert-resolved.png`.
+
 ## 6. Notification test (webhook)
 
 Alertmanager routed a synthetic `severity="test"` alert to a local webhook receiver.
@@ -111,9 +117,12 @@ Both the firing and the resolved payloads were received:
       2 "status":"resolved"
 ```
 
-> Telegram is configured as the preferred production receiver, but its bot token /
-> chat id are user-only secrets and were not available during this run. Webhook
-> delivery proves Alertmanager routing, grouping, and `send_resolved` work end to end.
+> **Telegram:** the bot token is valid (bot `@granfana_alert_manager_bot`) and the
+> credentials are configured, but Telegram returns `chat not found (400)` because the
+> user has not started the bot. The Alertmanager log of the actual
+`NexoraDatabaseDown` Telegram attempts (firing + resolved) is captured in
+`screenshots/alerting/database-alert-log.txt` and `07-telegram-delivery-attempts.png`.
+> Telegram is **not** claimed to work until a real message is received.
 
 ## 7. Grafana
 
@@ -149,8 +158,9 @@ deployment (and the public GitHub Actions pages):
 
 - `screenshots/prometheus/` — targets (6/6 UP) and the three PromQL queries.
 - `screenshots/grafana/` — datasource + health, Node Exporter Full (1860), Three-Tier App - Production.
-- `screenshots/alerting/` — Alertmanager UI, alert firing, resolved webhook payload, webhook notification.
-- `screenshots/github-actions/` — successful run 44905993282 and failed run 44905470131.
+- `screenshots/alerting/` — Alertmanager UI; actual `NexoraDatabaseDown` firing (`05-database-alert-firing.png`) and resolved (`06-database-alert-resolved.png`); Telegram delivery-attempt log (`07-telegram-delivery-attempts.png`, `database-alert-log.txt`); webhook firing/resolved payloads.
+- `screenshots/github-actions/` — successful runs 44905993282 / 44909256927 and failed run 44905470131.
 
-The only missing screenshot is `screenshots/alerting/03-telegram-notification.png`,
-which requires the user's Telegram bot token and chat id.
+The missing screenshots are the **Telegram chat** views
+(`03-telegram-firing.png`, `04-telegram-resolved.png`), which require the user to
+start `@granfana_alert_manager_bot` and then re-run the delivery test.

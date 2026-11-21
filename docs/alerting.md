@@ -88,31 +88,34 @@ the environment (`.env` on the server, GitHub Secrets in CI):
 
 `.env` is git-ignored; `.env.example` contains only placeholders.
 
-## 4. Manual Telegram setup (PART B)
+## 4. Telegram setup and status
 
-1. Create a bot with **@BotFather** → `/newbot` → copy the **bot token**.
-2. Add the bot to the target group/channel (or message it directly).
-3. Get the **numeric chat id**:
-   - Message the bot, then open
-     `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates` and read
-     `message.chat.id`, or
-   - Add **@getidsbot** to the group and read the id.
-4. Put the values in the server's `.env`:
+The Telegram bot and credentials are already configured on the deployment host:
 
-   ```dotenv
-   TELEGRAM_BOT_TOKEN=1234567890:AAEXAMPLE_NOT_A_REAL_TOKEN
-   TELEGRAM_CHAT_ID=-1001234567890
-   ```
+- Bot: **@granfana_alert_manager_bot**.
+- `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are stored in the server-side
+  `.env.deploy` (mode `600`); the rendered `alertmanager/alertmanager.yml` is mode
+  `640` (group `nogroup`).
+- The token is valid: `getMe` returns `ok: true` for `@granfana_alert_manager_bot`.
 
-5. Re-render and restart Alertmanager:
+**Current blocker:** Telegram returns **`chat not found (400)`** for the configured
+chat, and `getUpdates` is empty — the user has never started a conversation with the
+bot. Telegram bots cannot initiate a private chat.
+
+**To finish (user action):**
+
+1. Open Telegram, find **@granfana_alert_manager_bot**, and send `/start` (or any message).
+2. Re-render/restart if needed:
 
    ```bash
-   RENDER_ENV_FILE=.env ./scripts/render-config.sh
-   docker compose restart alertmanager
+   cd /opt/nexora/monitoring
+   RENDER_ENV_FILE=.env.deploy python3 scripts/render_config.py
+   docker compose --env-file .env.deploy -f docker-compose.yml -f docker-compose.m6.yml restart alertmanager
    ```
 
-6. **Test** by sending a test notification (Alertmanager UI → *Status* → or trigger a
-   rule). Do not claim notifications work until you have received a real message.
+3. Trigger a test alert or the DB-outage test and confirm the firing and resolved
+   messages appear in the chat.
+4. Do not claim Telegram notifications work until a real message is received.
 
 ## 5. Testing alerts without breaking production
 
@@ -130,17 +133,23 @@ the environment (`.env` on the server, GitHub Secrets in CI):
 
 ## 6. Notification delivery verification
 
-Because Telegram credentials are user-only, `scripts/test-notification.sh` sends a
-synthetic `severity="test"` alert to a local webhook receiver
-(`scripts/webhook_listener.py`) and captures the firing and resolved payloads. The
-actual run received **2 firing + 2 resolved** webhook payloads (see
-[`evidence.md`](evidence.md) §6), proving Alertmanager routing, grouping, and
-`send_resolved` work end to end. Telegram delivery remains pending the user's bot
-token and chat id.
+`scripts/test-notification.sh` sends a synthetic `severity="test"` alert to a local
+webhook receiver (`scripts/webhook_listener.py`) and captures the firing and resolved
+payloads. The run received **2 firing + 2 resolved** webhook payloads, proving
+Alertmanager routing, grouping, and `send_resolved` work end to end.
+
+**Telegram:** the token is valid, but delivery currently fails with
+`telegram: chat not found (400)` because the user has not started the bot (see §4).
+The Alertmanager log of the actual `NexoraDatabaseDown` Telegram attempts is captured
+in `screenshots/alerting/database-alert-log.txt` and
+`07-telegram-delivery-attempts.png`. Telegram is **not** claimed to work until a real
+message is received.
 
 ## 7. Alert rule test
 
 `scripts/test-alerting.sh` deliberately stops PostgreSQL, generates 503 traffic, and
-captures the result. Actual result: `NexoraDatabaseDown` fired (critical), the backend
-5xx error ratio reached ≈ 33.8%, and the alert resolved after PostgreSQL was restored
-(see [`evidence.md`](evidence.md) §5).
+captures the result. Actual result: the **real `NexoraDatabaseDown`** alert fired
+(critical), the backend 5xx error ratio reached ≈ 33.8%, and the alert resolved after
+PostgreSQL was restored (Alertmanager API returned 0 alerts; app `/ready` returned
+`{"status":"ready"}`). Evidence: `screenshots/alerting/05-database-alert-firing.png`,
+`06-database-alert-resolved.png`, and `database-alert-log.txt`.

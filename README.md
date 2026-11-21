@@ -5,9 +5,11 @@ Prometheus metrics, Grafana dashboards, Alertmanager notifications, and GitHub
 Actions CI/CD — deployed and verified end to end for Ostad Module 6.
 
 > **Deployment status:** the full stack is deployed on one dedicated EC2 instance and
-> verified (6/6 Prometheus targets UP, dashboards populated, alerts firing/resolved,
-> webhook notifications delivered, CI/CD green). **Telegram delivery is still pending
-> user credentials.** See the [PART B status](#part-b--status) for remaining items.
+> verified (6/6 Prometheus targets UP, dashboards populated, the real
+> `NexoraDatabaseDown` alert firing/resolved, webhook notifications delivered, CI/CD
+> green). **Telegram is configured with valid credentials but delivery is blocked**
+> because the bot has not been started by the user yet — see
+> [PART B status](#part-b--status).
 
 ---
 
@@ -333,19 +335,20 @@ Thresholds and `for` durations: [`docs/alerting.md`](docs/alerting.md) §1.
 ## 16. Notification setup
 
 Alertmanager routes to **Telegram** (preferred) with `send_resolved: true`, optional
-SMTP email, grouping, and inhibition. Secrets come from the environment, never git.
+SMTP email, grouping, and inhibition. Secrets live in the server-side `.env.deploy`
+(mode `600`); the rendered Alertmanager config is mode `640` (group `nogroup`). No
+credentials are committed to git.
 
-Manual steps (remaining): [`docs/alerting.md`](docs/alerting.md) §4. In short:
+To finish Telegram delivery (user action): open Telegram, find
+**@granfana_alert_manager_bot**, send `/start` (or any message), then re-run the
+delivery test or trigger a real alert and confirm the firing and resolved messages.
+See [`docs/alerting.md`](docs/alerting.md) §4.
 
-1. Create a bot with @BotFather → copy the token.
-2. Get the numeric chat id.
-3. Put `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` in `.env`.
-4. `./scripts/render-config.sh && docker compose restart alertmanager`.
-5. Send a test alert and confirm receipt.
-
-> **Telegram delivery is pending user credentials.** Webhook delivery has been
-> verified end to end (firing + resolved payloads), but no real Telegram message has
-> been received yet, so Telegram is not claimed to work.
+> **Telegram status:** the bot token is valid (bot `@granfana_alert_manager_bot`) and
+> the credentials are configured, but Telegram returns **`chat not found`** because the
+> user has not started a conversation with the bot. Webhook delivery is verified end to
+> end (firing + resolved payloads), but it is **not** represented as Telegram delivery.
+> Telegram is **not claimed to work** until a real message is received.
 
 ## 17. Docker Compose deployment
 
@@ -509,16 +512,17 @@ captured under [`screenshots/`](screenshots/).
 | Community dashboard | Node Exporter Full (ID 1860) imported |
 | Custom dashboard | `Three-Tier App - Production` (uid `nexora-three-tier-prod`) |
 | Datasource | `Prometheus` health `OK` |
-| Alert test | `NexoraDatabaseDown` fired → resolved after restore |
-| Notification test | webhook firing + resolved payloads received |
+| Alert test | actual `NexoraDatabaseDown` fired → resolved after restore (UI + API; 0 alerts after restore) |
+| Notification test | webhook firing + resolved payloads received; Telegram **blocked** (`chat not found` — user must start the bot) |
 | CI successful run | https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905336129 |
 | CI final successful run | https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905993282 |
 | CI failed run | https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905470131 |
 
 The automated browser screenshots have been captured (Prometheus targets and PromQL
-results, Grafana datasource/health, both dashboards, Alertmanager firing/resolved, and
-the GitHub Actions success/failure runs). Only the **Telegram notification** screenshot
-remains pending because Telegram credentials have not been provided — see
+results, Grafana datasource/health, both dashboards, the actual `NexoraDatabaseDown`
+firing/resolved states, and the GitHub Actions success/failure runs). The **Telegram
+chat** screenshots (`03-telegram-firing.png`, `04-telegram-resolved.png`) remain pending
+because the bot has not been started by the user yet — see
 [`screenshots/README.md`](screenshots/README.md).
 
 ## 25. References
@@ -547,8 +551,9 @@ remains pending because Telegram credentials have not been provided — see
 - [x] Three PromQL queries executed (results in `docs/evidence.md`).
 - [x] Community dashboard 1860 imported; custom dashboard provisioned.
 - [x] Grafana datasource health `OK`.
-- [x] DB-outage alert test: `NexoraDatabaseDown` fired, then resolved after restore.
+- [x] DB-outage alert test: actual `NexoraDatabaseDown` fired, then resolved after restore (UI + API; 0 alerts after restore).
 - [x] Webhook firing + resolved notifications received.
+- [x] Telegram credentials configured (valid bot token); delivery **blocked** because the user has not started the bot.
 - [x] Self-hosted runner installed; successful CI runs **44905336129** and **44905993282** (validate + deploy).
 - [x] Intentional invalid-config PR run **44905470131** failed as expected; branch deleted.
 - [x] Genuine browser screenshots captured (see below).
@@ -562,16 +567,20 @@ remains pending because Telegram credentials have not been provided — see
 - `screenshots/grafana/02-community-node-exporter.png` — Node Exporter Full (1860).
 - `screenshots/grafana/01-three-tier-dashboard.png` — Three-Tier App - Production.
 - `screenshots/alerting/01-alertmanager-ui.png`, `02-alert-firing.png` — Alertmanager + firing.
+- `screenshots/alerting/05-database-alert-firing.png`, `06-database-alert-resolved.png` — actual `NexoraDatabaseDown` firing/resolved.
+- `screenshots/alerting/07-telegram-delivery-attempts.png`, `database-alert-log.txt` — Alertmanager log of the Telegram delivery attempts.
 - `screenshots/alerting/04-alert-resolved.png`, `05-webhook-notification.png`, `webhook-notification.txt` — resolved webhook payloads.
 - `screenshots/github-actions/01-successful-run.png` (44905993282), `02-failed-run.png` (44905470131).
 
 ### Remaining user-only actions
-- [ ] Provide a Telegram bot token + chat id, restart Alertmanager, and trigger a test alert to capture real Telegram delivery (`screenshots/alerting/03-telegram-notification.png`).
+- [ ] In Telegram, open **@granfana_alert_manager_bot** and send `/start` (or any message), then re-run the delivery test to capture real Telegram delivery (`screenshots/alerting/03-telegram-firing.png`, `04-telegram-resolved.png`).
 - [ ] Optionally restrict the admin IP further / add TLS in front of Grafana.
 - [ ] Final review and submission.
 
 ---
 
-**Status:** Implementation, deployment, monitoring verification, alerting tests,
-webhook notification tests, CI/CD, and browser evidence capture are complete. The only
-outstanding items are user-only: **Telegram credentials/delivery** and final review.
+**Status:** Implementation, deployment, monitoring verification, the actual database
+alert firing/resolved test, webhook notification tests, CI/CD, and browser evidence
+capture are complete. Telegram is configured with valid credentials but delivery is
+blocked pending the user starting the bot; that and final review are the only remaining
+user-only items.
