@@ -497,8 +497,8 @@ How this project avoids it:
 
 The stack was deployed and verified end to end on the dedicated EC2
 (`3.25.110.229`). Reproducible command output is captured in
-[`docs/evidence.md`](docs/evidence.md); browser screenshots are the remaining
-user-only item.
+[`docs/evidence.md`](docs/evidence.md), and genuine browser screenshots have been
+captured under [`screenshots/`](screenshots/).
 
 | Item | Result |
 |---|---|
@@ -515,7 +515,11 @@ user-only item.
 | CI final successful run | https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905993282 |
 | CI failed run | https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905470131 |
 
-Browser screenshots still needed: see [`screenshots/README.md`](screenshots/README.md).
+The automated browser screenshots have been captured (Prometheus targets and PromQL
+results, Grafana datasource/health, both dashboards, Alertmanager firing/resolved, and
+the GitHub Actions success/failure runs). Only the **Telegram notification** screenshot
+remains pending because Telegram credentials have not been provided — see
+[`screenshots/README.md`](screenshots/README.md).
 
 ## 25. References
 
