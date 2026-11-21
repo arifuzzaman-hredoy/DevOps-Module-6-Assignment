@@ -1,0 +1,20 @@
+# Extra Compose config for the single-EC2 Module 6 deployment.
+# Attaches only the services that must reach the Nexora app to the shared network.
+services:
+  prometheus:
+    networks:
+      - monitoring
+      - nexora-net
+  postgres-exporter:
+    networks:
+      - monitoring
+      - nexora-net
+  blackbox-exporter:
+    networks:
+      - monitoring
+      - nexora-net
+
+networks:
+  nexora-net:
+    external: true
+    name: nexora-net

@@ -88,8 +88,11 @@ pass "alertmanager configuration"
 # ---------------------------------------------------------------------------
 # 5. Docker Compose configuration
 # ---------------------------------------------------------------------------
-docker compose --env-file "$ROOT/.env.example" -f "$ROOT/docker-compose.yml" config --quiet
+( cd "$ROOT" && docker compose --env-file .env.example -f docker-compose.yml config --quiet )
 pass "docker compose configuration"
+
+( cd "$ROOT" && docker compose --env-file .env.example -f docker-compose.yml -f deploy/monitoring/docker-compose.m6.yml config --quiet )
+pass "docker compose deployment override"
 
 # ---------------------------------------------------------------------------
 # 6. Grafana dashboard JSON

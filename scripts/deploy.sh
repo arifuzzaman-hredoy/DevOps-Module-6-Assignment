@@ -20,7 +20,10 @@ ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT"
 
 ENV_FILE="${ENV_FILE:-.env.deploy}"
-COMPOSE="docker compose --env-file ${ENV_FILE}"
+COMPOSE=(docker compose --env-file "$ENV_FILE" -f docker-compose.yml)
+if [[ -f "$ROOT/docker-compose.m6.yml" ]]; then
+    COMPOSE+=(-f docker-compose.m6.yml)
+fi
 
 if [[ ! -f "$ENV_FILE" ]]; then
     echo "ERROR: env file '$ENV_FILE' not found in $ROOT" >&2
@@ -32,20 +35,20 @@ echo "==> Rendering configuration from ${ENV_FILE}"
 RENDER_ENV_FILE="$ENV_FILE" python3 "$ROOT/scripts/render_config.py"
 
 echo "==> Pulling images"
-$COMPOSE pull --quiet
+"${COMPOSE[@]}" pull --quiet
 
 echo "==> Applying stack (up -d, remove orphans)"
-$COMPOSE up -d --remove-orphans
+"${COMPOSE[@]}" up -d --remove-orphans
 
 echo "==> Reloading Prometheus and Alertmanager to pick up rendered config"
-$COMPOSE restart prometheus alertmanager
+"${COMPOSE[@]}" restart prometheus alertmanager
 
 echo "==> Waiting for services to become healthy"
 "$ROOT/scripts/health-check.sh" || {
     echo "ERROR: health check failed after deploy" >&2
-    $COMPOSE ps
+    "${COMPOSE[@]}" ps
     exit 1
 }
 
 echo "==> Deployment complete"
-$COMPOSE ps
+"${COMPOSE[@]}" ps

@@ -1,0 +1,27 @@
+# Extra Compose config for the single-EC2 Module 6 deployment.
+# Joins the Nexora app services to the shared external network used by the
+# monitoring stack and publishes Nginx on port 80 for public access.
+services:
+  postgres:
+    networks:
+      - default
+      - nexora-net
+  backend:
+    networks:
+      - default
+      - nexora-net
+  frontend:
+    networks:
+      - default
+      - nexora-net
+  nginx:
+    networks:
+      - default
+      - nexora-net
+    ports:
+      - "0.0.0.0:80:80"
+
+networks:
+  nexora-net:
+    external: true
+    name: nexora-net
