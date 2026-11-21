@@ -1,38 +1,53 @@
-# Evidence / Screenshots
+# Screenshot Evidence — Ostad Module 6
 
-Genuine screenshots were captured automatically with headless Chrome against the live
-deployment (and the public GitHub Actions pages). The files below are real; no
-screenshots were fabricated.
+Genuine screenshots captured from the live production deployment and GitHub Actions.
+No screenshots are fabricated or simulated. Each file was captured from the running
+system (headless Chrome) or the public GitHub Actions pages.
 
-## Captured
+## Live URLs
 
-### prometheus/
-- `01-targets-up.png` — Status → Targets, all six targets UP.
-- `02-query-request-rate.png` — PromQL query 1 (request rate per route).
-- `03-query-error-ratio.png` — PromQL query 2 (5xx error ratio).
-- `04-query-db-connections.png` — PromQL query 3 (DB connection utilisation).
+- Main application: **https://nexora.oxytumzone.com**
+- Grafana: **https://grafananex.oxytumzone.com** (admin login; password never stored here)
+- Prometheus / Alertmanager: private (`127.0.0.1:9090` / `9093`, accessed via SSH tunnel)
 
-### grafana/
-- `01-three-tier-dashboard.png` — `Three-Tier App - Production`.
-- `02-community-node-exporter.png` — Node Exporter Full (ID 1860).
-- `03-datasource.png` — provisioned Prometheus data source.
-- `03b-datasource-health.png` — data source health check (working).
+## Directory structure
 
-### alerting/
-- `01-alertmanager-ui.png` — Alertmanager status page.
-- `02-alert-firing.png` — `NexoraDatabaseDown` firing during the earlier deliberate outage.
-- `05-database-alert-firing.png` — actual `NexoraDatabaseDown` firing (re-verified).
-- `06-database-alert-resolved.png` — actual `NexoraDatabaseDown` resolved (Alertmanager UI shows no active alert; API returns 0 alerts).
-- `07-telegram-delivery-attempts.png`, `database-alert-log.txt` — genuine Alertmanager log of the `NexoraDatabaseDown` Telegram delivery attempts (firing + resolved). The log shows the earlier `chat not found` attempts and the later successful delivery.
-- `08-telegram-delivery-metrics.png`, `telegram-delivery-metrics.txt` — Alertmanager metrics proving **2 successful Telegram sends (firing + resolved), 0 failures**.
-- `04-alert-resolved.png`, `05-webhook-notification.png`, `webhook-notification.txt` — genuine firing + resolved webhook payloads.
+```text
+screenshots/
+├── prometheus/             # Task 1
+├── grafana/                # Task 2
+├── community-dashboard/    # Task 3
+├── three-tier-dashboard/   # Task 4
+├── alerting/               # Task 5
+├── github-actions/         # Task 6
+├── production-deployment/  # Live deployment + SSL
+└── README.md
+```
 
-### github-actions/
-- `01-successful-run.png` — successful run `44905993282` (Validate + Deploy).
-- `02-failed-run.png` — failed run `44905470131` (intentionally invalid rule).
+## Task mapping
 
-## Pending (user-only)
+| Task | Evidence files |
+|---|---|
+| **Task 1 — Prometheus (15)** | `prometheus/01-targets-up.png`, `02-query-request-rate.png`, `03-query-error-ratio.png`, `04-query-db-connections.png` |
+| **Task 2 — Grafana (10)** | `grafana/05-grafana-home.png`, `06-datasource.png`, `07-datasource-health.png` |
+| **Task 3 — Community dashboard (10)** | `community-dashboard/01-node-exporter-full.png` |
+| **Task 4 — Three-Tier dashboard (20)** | `three-tier-dashboard/01-overview.png`, `02-frontend-row.png`, `03-backend-row.png`, `04-database-row.png`, `05-server-row.png` |
+| **Task 5 — Alerting (20)** | `alerting/01-alertmanager-status.png`, `02-alert-rules.png`, `03-alertmanager-alerts.png`, `04-database-alert-firing.png`, `05-database-alert-resolved.png`, `06-telegram-delivery.png`, `07-telegram-delivery-log.png`, `08-webhook-notification.png` |
+| **Task 6 — GitHub CI/CD (15)** | `github-actions/01-successful-run.png` (Validate + Deploy), `03-failed-run.png` (intentional invalid config) |
+| **Task 7 — Questions (10)** | Answered in the main `README.md` §23 (no screenshots needed) |
+| **Production** | `production-deployment/01-nexora-home.png`, `02-nexora-healthz.png`, `03-grafana-public.png`, `04-three-tier-public.png`, `05-node-exporter-public.png`, `06-ssl-certificate.png` |
 
-- `alerting/03-telegram-firing.png`, `alerting/04-telegram-resolved.png` — optional
-  Telegram chat views from the user's app. Delivery itself is verified by
-  `08-telegram-delivery-metrics.png` (2 successful sends, 0 failures).
+## Notes
+
+- **Telegram:** delivery is verified by Alertmanager metrics (`06-telegram-delivery.png`:
+  2 successful sends, 0 failures) and the delivery log (`07-telegram-delivery-log.png`).
+  The actual Telegram chat screenshots are **user-only** (they require the user's
+  Telegram app) and are not included.
+- **Database alert:** `04-database-alert-firing.png` and `05-database-alert-resolved.png`
+  are genuine captures of the real `NexoraDatabaseDown` alert during a controlled
+  outage and after recovery. The database was restored immediately and health was
+  re-verified.
+- **Grafana:** screenshots are captured through the public HTTPS domain
+  `https://grafananex.oxytumzone.com`; the admin password is never shown.
+- **SSL:** `06-ssl-certificate.png` shows the Let's Encrypt certificate served by both
+  domains (SANs `nexora.oxytumzone.com`, `grafananex.oxytumzone.com`).

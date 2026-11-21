@@ -146,6 +146,7 @@ Three-Tier App - Production | uid: nexora-three-tier-prod
 |---|---|---|
 | [44905336129](https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905336129) | push to `main` | **success** — Validate ✓, Deploy ✓ |
 | [44905993282](https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905993282) | push to `main` (final) | **success** — Validate ✓, Deploy ✓ |
+| [44918204297](https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44918204297) | push to `main` (domains/TLS) | **success** — Validate ✓, Deploy ✓ |
 | [44905470131](https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905470131) | PR from throwaway branch | **failure** — `promtool` rejected the intentionally invalid rule |
 
 The failed run was produced on branch `ci/failure-demo` (PR #1), then the PR was
@@ -153,13 +154,18 @@ closed and the branch deleted. `main` remains valid.
 
 ## 9. Screenshots captured
 
-Genuine browser screenshots were captured with headless Chrome against the live
-deployment (and the public GitHub Actions pages):
+All screenshots are genuine headless-Chrome captures from the live deployment and the
+public GitHub Actions pages. Full index: [`../screenshots/README.md`](../screenshots/README.md).
 
-- `screenshots/prometheus/` — targets (6/6 UP) and the three PromQL queries.
-- `screenshots/grafana/` — datasource + health, Node Exporter Full (1860), Three-Tier App - Production.
-- `screenshots/alerting/` — Alertmanager UI; actual `NexoraDatabaseDown` firing (`05-database-alert-firing.png`) and resolved (`06-database-alert-resolved.png`); Telegram delivery-attempt log (`07-telegram-delivery-attempts.png`, `database-alert-log.txt`); Telegram delivery metrics (`08-telegram-delivery-metrics.png`, `telegram-delivery-metrics.txt`); webhook firing/resolved payloads.
-- `screenshots/github-actions/` — successful runs 44905993282 / 44909256927 and failed run 44905470131.
+| Directory | Contents |
+|---|---|
+| `screenshots/prometheus/` | Targets (6/6 UP) + three PromQL queries |
+| `screenshots/grafana/` | Grafana home, datasource, datasource health (via `https://grafananex.oxytumzone.com`) |
+| `screenshots/community-dashboard/` | Node Exporter Full (ID 1860) |
+| `screenshots/three-tier-dashboard/` | `Three-Tier App - Production` overview + Frontend/Backend/Database/Server rows |
+| `screenshots/alerting/` | Alertmanager status, alert rules, alerts; actual `NexoraDatabaseDown` firing/resolved; Telegram delivery metrics/log; webhook payloads |
+| `screenshots/github-actions/` | Successful run 44918204297 (Validate + Deploy) and failed run 44905470131 |
+| `screenshots/production-deployment/` | `https://nexora.oxytumzone.com`, `/healthz`, Grafana public domain, dashboards via public domain, SSL certificate |
 
-The Telegram chat views (`03-telegram-firing.png`, `04-telegram-resolved.png`) are
-user-only; delivery is verified by `08-telegram-delivery-metrics.png`.
+The Telegram chat views are user-only; delivery is verified by
+`screenshots/alerting/06-telegram-delivery.png` (2 successful sends, 0 failures).

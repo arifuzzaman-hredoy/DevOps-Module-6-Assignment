@@ -10,6 +10,10 @@ Actions CI/CD — deployed and verified end to end for Ostad Module 6.
 > delivery verified**, CI/CD green). See [PART B status](#part-b--status) for the
 > remaining optional items.
 
+**Live:** [https://nexora.oxytumzone.com](https://nexora.oxytumzone.com) ·
+[Grafana](https://grafananex.oxytumzone.com) ·
+[Screenshots](screenshots/README.md)
+
 ---
 
 ## 1. Project overview
@@ -526,13 +530,28 @@ screenshots are under [`screenshots/`](screenshots/).
 | CI final successful run | https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905993282 |
 | CI failed run | https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905470131 |
 
-The automated browser screenshots have been captured (Prometheus targets and PromQL
-results, Grafana datasource/health, both dashboards, the actual `NexoraDatabaseDown`
-firing/resolved states, and the GitHub Actions success/failure runs). Telegram delivery
-is verified by the Alertmanager metrics (`08-telegram-delivery-metrics.png`); the
-**Telegram chat** screenshots (`03-telegram-firing.png`, `04-telegram-resolved.png`) are
-user-only and can be captured from the user's Telegram app — see
-[`screenshots/README.md`](screenshots/README.md).
+### Screenshot evidence
+
+All screenshots are genuine captures from the live system; see
+[`screenshots/README.md`](screenshots/README.md) for the full index.
+
+| Task | Evidence |
+|---|---|
+| Task 1 — Prometheus | [targets](screenshots/prometheus/01-targets-up.png) · [request rate](screenshots/prometheus/02-query-request-rate.png) · [error ratio](screenshots/prometheus/03-query-error-ratio.png) · [DB connections](screenshots/prometheus/04-query-db-connections.png) |
+| Task 2 — Grafana | [home](screenshots/grafana/05-grafana-home.png) · [datasource](screenshots/grafana/06-datasource.png) · [health](screenshots/grafana/07-datasource-health.png) |
+| Task 3 — Community | [Node Exporter Full](screenshots/community-dashboard/01-node-exporter-full.png) |
+| Task 4 — Three-Tier | [overview](screenshots/three-tier-dashboard/01-overview.png) · [frontend](screenshots/three-tier-dashboard/02-frontend-row.png) · [backend](screenshots/three-tier-dashboard/03-backend-row.png) · [database](screenshots/three-tier-dashboard/04-database-row.png) · [server](screenshots/three-tier-dashboard/05-server-row.png) |
+| Task 5 — Alerting | [status](screenshots/alerting/01-alertmanager-status.png) · [rules](screenshots/alerting/02-alert-rules.png) · [firing](screenshots/alerting/04-database-alert-firing.png) · [resolved](screenshots/alerting/05-database-alert-resolved.png) · [Telegram metrics](screenshots/alerting/06-telegram-delivery.png) |
+| Task 6 — CI/CD | [success](screenshots/github-actions/01-successful-run.png) · [failure](screenshots/github-actions/03-failed-run.png) |
+| Production | [site](screenshots/production-deployment/01-nexora-home.png) · [healthz](screenshots/production-deployment/02-nexora-healthz.png) · [Grafana](screenshots/production-deployment/03-grafana-public.png) · [SSL](screenshots/production-deployment/06-ssl-certificate.png) |
+
+![Prometheus targets](screenshots/prometheus/01-targets-up.png)
+![Three-Tier App - Production](screenshots/three-tier-dashboard/01-overview.png)
+![Node Exporter Full](screenshots/community-dashboard/01-node-exporter-full.png)
+
+The **Telegram chat** screenshots (`03-telegram-firing.png`, `04-telegram-resolved.png`)
+are user-only; Telegram delivery is verified by the Alertmanager metrics
+(`06-telegram-delivery.png`: 2 successful sends, 0 failures).
 
 ## 25. References
 
