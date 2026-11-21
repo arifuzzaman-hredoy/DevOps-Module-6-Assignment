@@ -44,11 +44,19 @@ echo "==> Reloading Prometheus and Alertmanager to pick up rendered config"
 "${COMPOSE[@]}" restart prometheus alertmanager
 
 echo "==> Waiting for services to become healthy"
-"$ROOT/scripts/health-check.sh" || {
+healthy=0
+for attempt in $(seq 1 30); do
+    if "$ROOT/scripts/health-check.sh"; then
+        healthy=1
+        break
+    fi
+    sleep 3
+done
+if [ "$healthy" -ne 1 ]; then
     echo "ERROR: health check failed after deploy" >&2
     "${COMPOSE[@]}" ps
     exit 1
-}
+fi
 
 echo "==> Deployment complete"
 "${COMPOSE[@]}" ps
