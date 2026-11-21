@@ -71,16 +71,18 @@ Security groups (from Module 4 README):
 
 ### 2.1 Where the monitoring stack runs
 
-The monitoring stack is designed to run on the **web tier** (the only public tier),
-as a separate Docker Compose project (`nexora-monitoring`). It does not touch the
-existing Nexora containers/systemd services.
+The monitoring stack runs on the **single dedicated Module 6 EC2 instance**, as a
+separate Docker Compose project (`nexora-monitoring`) alongside the app's
+`nexora-local` project. It does not touch the existing Nexora containers.
 
 - Prometheus, Grafana, Alertmanager, Node Exporter, postgres_exporter, and
-  blackbox-exporter all run in one dedicated Docker network (`nexora-monitoring`).
-- No exporter ports are published. Prometheus (9090), Grafana (3000), and
-  Alertmanager (9093) are published on **loopback only** by default
-  (`MONITORING_BIND_ADDRESS=127.0.0.1`). Access them via SSH tunnel or put them
-  behind the existing Nginx.
+  blackbox-exporter all run in one dedicated Docker network (`nexora-monitoring`);
+  `prometheus`, `postgres-exporter`, and `blackbox-exporter` are also attached to the
+  shared `nexora-net` network to reach the app.
+- No exporter ports are published. Prometheus (9090) and Alertmanager (9093) bind to
+  **loopback**; Grafana (3000) binds to `0.0.0.0` but the security group restricts it
+  to the admin `/24` (`http://3.25.110.229:3000`). Access Prometheus/Alertmanager via
+  SSH tunnel.
 
 ### 2.2 How Prometheus reaches each target
 
@@ -88,42 +90,40 @@ existing Nexora containers/systemd services.
 |---|---|---|
 | Node Exporter | `node-exporter:9100` | Same Docker network |
 | postgres_exporter | `postgres-exporter:9187` | Same Docker network; exporter connects to DB via `NEXORA_DB_EXPORTER_DSN` |
-| Backend `/metrics` | `${NEXORA_APP_METRICS_TARGET}` (e.g. `10.30.2.82:3000`) | App SG must allow TCP 3000 from the Web SG (already true) |
-| Frontend probe | `${NEXORA_FRONTEND_PROBE_TARGET}` (public HTTPS URL) | Public internet / blackbox-exporter egress |
-| Backend health probe | `${NEXORA_BACKEND_PROBE_TARGET}` (e.g. `http://10.30.2.82:3000/ready`) | App SG allows Web SG |
+| Backend `/metrics` | `backend:3000` (`NEXORA_APP_METRICS_TARGET`) | Same `nexora-net` Docker network |
+| Frontend probe | `http://frontend:80/healthz` (`NEXORA_FRONTEND_PROBE_TARGET`) | Same `nexora-net` Docker network |
+| Backend health probe | `http://backend:3000/ready` (`NEXORA_BACKEND_PROBE_TARGET`) | Same `nexora-net` Docker network |
 
 Containers that need to reach the host (local Docker Desktop) use
 `extra_hosts: host.docker.internal:host-gateway`.
 
-### 2.3 Required manual infrastructure changes (PART B)
+### 2.3 Required infrastructure changes
 
-These are **not** performed by this repository. Document them for the deployment:
-
-1. **Backend instrumentation** — apply `integration/backend/nexora-prometheus.patch`
-   to the Module 4 backend, rebuild the image / binary, and restart
-   `nexora-backend.service`. See `integration/backend/README.md`.
-2. **Block `/metrics` at the edge** — the backend now exposes `/metrics`. If Nginx
-   proxies `/api/` only, `/metrics` is already not exposed (Nginx does not proxy
-   `/metrics`). If you ever proxy `/metrics`, restrict it to the monitoring source.
-3. **PostgreSQL monitoring role** — run `exporters/postgres-monitor-role.sql` once on
-   the DB server and put the DSN in `.env` as `NEXORA_DB_EXPORTER_DSN`.
-4. **Security group** — confirm the App SG allows TCP 3000 from the Web SG (it does),
-   so Prometheus (on the web tier) can scrape the backend. No DB SG change is needed
-   for postgres_exporter because it connects from the web tier; if you run the
-   exporter on the DB tier instead, allow 9187 from the Web SG.
-5. **Optional full host coverage** — run one Node Exporter per EC2 instance and add
-   each host to the `node` job in `prometheus.yml` to monitor app and DB hosts too.
+1. **Backend instrumentation** — `integration/backend/nexora-prometheus.patch` is
+   applied to `/opt/nexora/app/backend` and the image is rebuilt; `/metrics` is
+   scraped over the shared network. See `integration/backend/README.md`.
+2. **`/metrics` exposure** — Nginx proxies `/api/` only, so `/metrics` is not exposed
+   at the edge. If you ever proxy `/metrics`, restrict it to the monitoring source.
+3. **PostgreSQL monitoring role** — `exporters/postgres-monitor-role.sql` is run once
+   on the database server; the DSN is set in `.env` as `NEXORA_DB_EXPORTER_DSN`.
+4. **Security group** — the single EC2 security group allows only SSH (admin `/24`),
+   HTTP/HTTPS, and Grafana (admin `/24`). Containers reach each other over Docker
+   networks, so no app/database ports are opened. Prometheus/Alertmanager stay on
+   loopback.
+5. **Host coverage** — Node Exporter monitors the single Module 6 EC2 host. To monitor
+   additional hosts, add one Node Exporter per host and a `static_configs` entry to the
+   `node` job in `prometheus.yml`.
 
 ### 2.4 Target configuration: local vs AWS
 
 All addresses are environment variables in `.env` (see `.env.example`).
 
-| Variable | Local (Docker Desktop) | AWS (web tier) |
+| Variable | Local (Docker Desktop) | AWS (single EC2) |
 |---|---|---|
-| `NEXORA_APP_METRICS_TARGET` | `host.docker.internal:3000` | `10.30.2.82:3000` |
-| `NEXORA_DB_EXPORTER_DSN` | `postgresql://nexora_monitoring:***@host.docker.internal:5432/nexora?sslmode=disable` | `postgresql://nexora_monitoring:***@10.30.3.195:5432/nexora?sslmode=require` |
-| `NEXORA_FRONTEND_PROBE_TARGET` | `https://nexora.oxytumzone.com` (or local Nginx URL) | `https://nexora.oxytumzone.com` |
-| `NEXORA_BACKEND_PROBE_TARGET` | `http://host.docker.internal:3000/ready` | `http://10.30.2.82:3000/ready` |
+| `NEXORA_APP_METRICS_TARGET` | `host.docker.internal:3000` | `backend:3000` |
+| `NEXORA_DB_EXPORTER_DSN` | `postgresql://nexora_monitoring:***@host.docker.internal:5432/nexora?sslmode=disable` | `postgresql://nexora_monitoring:***@postgres:5432/nexora?sslmode=disable` |
+| `NEXORA_FRONTEND_PROBE_TARGET` | `https://nexora.oxytumzone.com` (or local Nginx URL) | `http://frontend:80/healthz` |
+| `NEXORA_BACKEND_PROBE_TARGET` | `http://host.docker.internal:3000/ready` | `http://backend:3000/ready` |
 
 > Never commit a real `.env`. Use `.env.example` as the template and supply real
 > values on the server (and via GitHub Secrets for CI/CD).

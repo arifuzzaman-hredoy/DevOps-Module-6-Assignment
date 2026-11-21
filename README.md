@@ -2,11 +2,12 @@
 
 Production-oriented monitoring for the existing **Nexora** three-tier application:
 Prometheus metrics, Grafana dashboards, Alertmanager notifications, and GitHub
-Actions CI/CD — built for Ostad Module 6, **PART A (implementation)**.
+Actions CI/CD — deployed and verified end to end for Ostad Module 6.
 
-> **PART A status:** implementation, documentation, and local validation complete.
-> No live deployment, notification delivery, or runtime testing is performed in this
-> phase. See [PART B checklist](#part-b--manual-work-checklist).
+> **Deployment status:** the full stack is deployed on one dedicated EC2 instance and
+> verified (6/6 Prometheus targets UP, dashboards populated, alerts firing/resolved,
+> webhook notifications delivered, CI/CD green). **Telegram delivery is still pending
+> user credentials.** See the [PART B status](#part-b--status) for remaining items.
 
 ---
 
@@ -62,7 +63,7 @@ Verified from the Module 4 source (not assumed):
 | Frontend | **React 19 + Vite + TypeScript**, served by **Nginx** | container health `GET /healthz` |
 | Backend API | **Rust + Axum 0.8**, `0.0.0.0:3000` | `GET /health`, `GET /ready` |
 | Database | **PostgreSQL 16**, self-hosted on EC2 (not RDS) | `nexora` DB, `nexora_app` role |
-| Reverse proxy | **Nginx** on the web tier, `/api/` → backend:3000 | |
+| Reverse proxy | **Nginx** (Module 4 web tier), `/api/` → backend:3000 | |
 | Process manager | **systemd** (`nexora-backend.service`) | |
 | Cloud (Module 4) | AWS, 3 × Ubuntu 24.04 EC2 across public/private subnets | |
 
@@ -176,7 +177,7 @@ DevOps-Module-6-Assignment/
 ├── docs/
 │   ├── architecture.md  deployment.md  prometheus.md  grafana.md
 │   ├── alerting.md  cicd.md  nexora-integration.md
-├── screenshots/            # PART B evidence (README checklist)
+├── screenshots/            # genuine captured evidence (README checklist)
 ├── .env.example
 ├── .gitignore
 ├── LICENSE
@@ -208,10 +209,11 @@ Scrape interval 15s; evaluation 15s; retention 15d. Full details:
 | postgres_exporter | DB metrics via least-privilege `nexora_monitoring` role (`pg_monitor`) | internal only |
 | Blackbox Exporter | HTTP probes (frontend URL, backend `/ready`) | internal only |
 
-> **Node Exporter scope:** it currently monitors **only the web-tier monitoring host**
-> where the stack runs — **not** all three EC2 instances. To monitor the app and
-> database hosts as well, run one Node Exporter per instance and add each host to the
-> `node` job in `prometheus/prometheus.yml` (see `docs/nexora-integration.md` §2.3).
+> **Node Exporter scope:** it monitors the **single dedicated Module 6 EC2 host**
+> (`c7i-flex.large`, `3.25.110.229`) that runs the frontend, backend, PostgreSQL, and
+> the monitoring stack — not three separate servers. To monitor additional hosts
+> later, add one Node Exporter per host and a `static_configs` entry to the `node` job
+> in `prometheus/prometheus.yml`.
 
 Setup and the least-privilege SQL: [`exporters/README.md`](exporters/README.md) and
 `exporters/postgres-monitor-role.sql`.
@@ -252,8 +254,9 @@ entirely as code.
 ### 12.1 Grafana deployment
 
 - Service: `grafana` (`grafana/grafana-oss:11.4.0`) in `docker-compose.yml`.
-- Published on loopback `${GRAFANA_PORT}` (default 3000); reachable via SSH tunnel or
-  the existing Nginx with TLS/auth.
+- Published on `0.0.0.0:3000` in this deployment (`GRAFANA_BIND_ADDRESS=0.0.0.0`);
+  access is restricted by the security group to the admin `/24`
+  (`http://3.25.110.229:3000`). Prometheus and Alertmanager remain on loopback.
 - Admin credentials from `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` in `.env`.
 - Provisioning is mounted read-only from `grafana/provisioning/`.
 - Dashboards and database persist in the `nexora-monitoring-grafana-data` volume.
@@ -332,7 +335,7 @@ Thresholds and `for` durations: [`docs/alerting.md`](docs/alerting.md) §1.
 Alertmanager routes to **Telegram** (preferred) with `send_resolved: true`, optional
 SMTP email, grouping, and inhibition. Secrets come from the environment, never git.
 
-Manual steps (PART B): [`docs/alerting.md`](docs/alerting.md) §4. In short:
+Manual steps (remaining): [`docs/alerting.md`](docs/alerting.md) §4. In short:
 
 1. Create a bot with @BotFather → copy the token.
 2. Get the numeric chat id.
@@ -340,7 +343,9 @@ Manual steps (PART B): [`docs/alerting.md`](docs/alerting.md) §4. In short:
 4. `./scripts/render-config.sh && docker compose restart alertmanager`.
 5. Send a test alert and confirm receipt.
 
-> Notifications are **not** claimed to work until a real message is received (PART B).
+> **Telegram delivery is pending user credentials.** Webhook delivery has been
+> verified end to end (firing + resolved payloads), but no real Telegram message has
+> been received yet, so Telegram is not claimed to work.
 
 ## 17. Docker Compose deployment
 
@@ -407,7 +412,8 @@ More: [`docs/deployment.md`](docs/deployment.md) §9.
 
 - No hardcoded credentials; secrets via `.env` / GitHub Secrets only.
 - `.env` is git-ignored; `.env.example` has placeholders only.
-- UIs bind to loopback by default; exporters are not published.
+- Prometheus/Alertmanager bind to loopback; Grafana binds to `0.0.0.0:3000` but the
+  security group restricts it to the admin `/24`. Exporters are not published.
 - Least-privilege DB monitoring role (`pg_monitor` only).
 - Backend `/metrics` should not be publicly exposed.
 - CI uses `permissions: contents: read`; deploy is gated to `push` on `main`.
@@ -506,6 +512,7 @@ user-only item.
 | Alert test | `NexoraDatabaseDown` fired → resolved after restore |
 | Notification test | webhook firing + resolved payloads received |
 | CI successful run | https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905336129 |
+| CI final successful run | https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905993282 |
 | CI failed run | https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905470131 |
 
 Browser screenshots still needed: see [`screenshots/README.md`](screenshots/README.md).
@@ -538,16 +545,29 @@ Browser screenshots still needed: see [`screenshots/README.md`](screenshots/READ
 - [x] Grafana datasource health `OK`.
 - [x] DB-outage alert test: `NexoraDatabaseDown` fired, then resolved after restore.
 - [x] Webhook firing + resolved notifications received.
-- [x] Self-hosted runner installed; successful CI run **44905336129** (validate + deploy).
+- [x] Self-hosted runner installed; successful CI runs **44905336129** and **44905993282** (validate + deploy).
 - [x] Intentional invalid-config PR run **44905470131** failed as expected; branch deleted.
+- [x] Genuine browser screenshots captured (see below).
+
+### Screenshots captured
+- `screenshots/prometheus/01-targets-up.png` — 6/6 targets UP.
+- `screenshots/prometheus/02-query-request-rate.png` — PromQL query 1.
+- `screenshots/prometheus/03-query-error-ratio.png` — PromQL query 2.
+- `screenshots/prometheus/04-query-db-connections.png` — PromQL query 3.
+- `screenshots/grafana/03-datasource.png`, `03b-datasource-health.png` — datasource + health.
+- `screenshots/grafana/02-community-node-exporter.png` — Node Exporter Full (1860).
+- `screenshots/grafana/01-three-tier-dashboard.png` — Three-Tier App - Production.
+- `screenshots/alerting/01-alertmanager-ui.png`, `02-alert-firing.png` — Alertmanager + firing.
+- `screenshots/alerting/04-alert-resolved.png`, `05-webhook-notification.png`, `webhook-notification.txt` — resolved webhook payloads.
+- `screenshots/github-actions/01-successful-run.png` (44905993282), `02-failed-run.png` (44905470131).
 
 ### Remaining user-only actions
-- [ ] Provide a Telegram bot token + chat id and re-run the alert test to capture real Telegram delivery.
-- [ ] Capture the browser screenshots listed in `screenshots/README.md` (targets, PromQL, datasource, both dashboards, alert firing/resolved, notification, CI runs).
-- [ ] Optionally restrict the admin IP / add TLS in front of Grafana.
+- [ ] Provide a Telegram bot token + chat id, restart Alertmanager, and trigger a test alert to capture real Telegram delivery (`screenshots/alerting/03-telegram-notification.png`).
+- [ ] Optionally restrict the admin IP further / add TLS in front of Grafana.
 - [ ] Final review and submission.
 
 ---
 
-**Status:** PART A + automated PART B complete. Remaining items are user-only
-(Telegram credentials, browser screenshots, final review).
+**Status:** Implementation, deployment, monitoring verification, alerting tests,
+webhook notification tests, CI/CD, and browser evidence capture are complete. The only
+outstanding items are user-only: **Telegram credentials/delivery** and final review.

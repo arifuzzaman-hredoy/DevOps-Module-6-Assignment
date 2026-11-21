@@ -51,9 +51,9 @@ separate servers.
 
 | Component | Image | Container port | Published | Purpose |
 |---|---|---|---|---|
-| Prometheus | `prom/prometheus:v2.53.0` | 9090 | `${MONITORING_BIND_ADDRESS}:${PROMETHEUS_PORT}` (loopback) | Scraping, rule evaluation, TSDB |
-| Grafana | `grafana/grafana-oss:11.4.0` | 3000 | loopback `${GRAFANA_PORT}` | Dashboards |
-| Alertmanager | `prom/alertmanager:v0.27.0` | 9093 | loopback `${ALERTMANAGER_PORT}` | Alert routing/notifications |
+| Prometheus | `prom/prometheus:v2.53.0` | 9090 | `${PROMETHEUS_BIND_ADDRESS:-127.0.0.1}:${PROMETHEUS_PORT}` (loopback) | Scraping, rule evaluation, TSDB |
+| Grafana | `grafana/grafana-oss:11.4.0` | 3000 | `${GRAFANA_BIND_ADDRESS:-127.0.0.1}:${GRAFANA_PORT}` (0.0.0.0 in this deployment, admin /24 only) | Dashboards |
+| Alertmanager | `prom/alertmanager:v0.27.0` | 9093 | `${ALERTMANAGER_BIND_ADDRESS:-127.0.0.1}:${ALERTMANAGER_PORT}` (loopback) | Alert routing/notifications |
 | Node Exporter | `prom/node-exporter:v1.8.2` | 9100 | none (internal) | Host metrics |
 | postgres_exporter | `prometheuscommunity/postgres-exporter:v0.17.1` | 9187 | none (internal) | PostgreSQL metrics |
 | Blackbox Exporter | `prom/blackbox-exporter:v0.25.0` | 9115 | none (internal) | HTTP availability probes |
@@ -100,6 +100,6 @@ allowing environment-specific targets.
 - Restart policy `unless-stopped` on every long-running service.
 - Health checks for Prometheus, Grafana, Alertmanager, and blackbox.
 - Persistent volumes for all stateful components.
-- No exporter port is published; UIs bind to loopback by default.
+- No exporter port is published; Prometheus/Alertmanager bind to loopback, Grafana binds to `0.0.0.0:3000` restricted by the security group to the admin `/24`.
 - Least-privilege database monitoring role (`pg_monitor` only).
 - Idempotent deployment script; only recreates containers whose config changed.

@@ -1,9 +1,9 @@
 # Deployment Evidence
 
-This file records **real** command output captured during the PART B deployment on
-the dedicated EC2 (`3.25.110.229`). It is a snapshot from 2026-11-21 (UTC); live
-values change over time. Browser screenshots are the remaining user-only item — see
-[`../screenshots/README.md`](../screenshots/README.md).
+This file records **real** command output captured during the deployment and
+verification on the dedicated EC2 (`3.25.110.229`). It is a snapshot from 2026-11-21
+(UTC); live values change over time. Genuine browser screenshots are in
+[`../screenshots/`](../screenshots/).
 
 ## 1. Infrastructure
 
@@ -136,13 +136,21 @@ Three-Tier App - Production | uid: nexora-three-tier-prod
 | Run | Event | Result |
 |---|---|---|
 | [44905336129](https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905336129) | push to `main` | **success** — Validate ✓, Deploy ✓ |
+| [44905993282](https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905993282) | push to `main` (final) | **success** — Validate ✓, Deploy ✓ |
 | [44905470131](https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment/actions/runs/44905470131) | PR from throwaway branch | **failure** — `promtool` rejected the intentionally invalid rule |
 
 The failed run was produced on branch `ci/failure-demo` (PR #1), then the PR was
 closed and the branch deleted. `main` remains valid.
 
-## 9. Remaining evidence (user-only)
+## 9. Screenshots captured
 
-Browser screenshots: Prometheus targets, PromQL results, Grafana datasource, both
-dashboards, alert firing/resolved, notification, and the two CI runs. See
-[`../screenshots/README.md`](../screenshots/README.md).
+Genuine browser screenshots were captured with headless Chrome against the live
+deployment (and the public GitHub Actions pages):
+
+- `screenshots/prometheus/` — targets (6/6 UP) and the three PromQL queries.
+- `screenshots/grafana/` — datasource + health, Node Exporter Full (1860), Three-Tier App - Production.
+- `screenshots/alerting/` — Alertmanager UI, alert firing, resolved webhook payload, webhook notification.
+- `screenshots/github-actions/` — successful run 44905993282 and failed run 44905470131.
+
+The only missing screenshot is `screenshots/alerting/03-telegram-notification.png`,
+which requires the user's Telegram bot token and chat id.

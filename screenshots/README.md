@@ -1,39 +1,37 @@
 # Evidence / Screenshots
 
-This directory holds PART B runtime evidence. Screenshots are intentionally **not**
-included in PART A because no live deployment or runtime testing is performed in this
-phase. Capture the following during PART B and save them in the matching folder.
+Genuine screenshots were captured automatically with headless Chrome against the live
+deployment (and the public GitHub Actions pages). The files below are real; no
+screenshots were fabricated.
 
-## prometheus/
+## Captured
 
-- `01-targets-up.png` — Prometheus **Status → Targets** showing every target `UP`
-  (`prometheus`, `node`, `postgres`, `nexora-backend`, `blackbox-frontend`,
-  `blackbox-backend`).
-- `02-explore-request-rate.png` — PromQL query 1 executed in **Explore**.
-- `03-explore-error-ratio.png` — PromQL query 2 executed.
-- `04-explore-db-connections.png` — PromQL query 3 executed.
+### prometheus/
+- `01-targets-up.png` — Status → Targets, all six targets UP.
+- `02-query-request-rate.png` — PromQL query 1 (request rate per route).
+- `03-query-error-ratio.png` — PromQL query 2 (5xx error ratio).
+- `04-query-db-connections.png` — PromQL query 3 (DB connection utilisation).
 
-## grafana/
+### grafana/
+- `01-three-tier-dashboard.png` — `Three-Tier App - Production`.
+- `02-community-node-exporter.png` — Node Exporter Full (ID 1860).
+- `03-datasource.png` — provisioned Prometheus data source.
+- `03b-datasource-health.png` — data source health check (working).
 
-- `01-three-tier-dashboard.png` — the `Three-Tier App - Production` dashboard with
-  all four rows populated.
-- `02-community-node-exporter.png` — the imported `Node Exporter Full` (ID 1860)
-  dashboard.
-- `03-datasource.png` — the provisioned `Prometheus` data source.
+### alerting/
+- `01-alertmanager-ui.png` — Alertmanager status page.
+- `02-alert-firing.png` — `NexoraDatabaseDown` firing during the deliberate outage.
+- `04-alert-resolved.png` — resolved notification payload. (The Alertmanager UI does
+  not retain resolved alerts, so the resolved state is evidenced by the webhook
+  payload.)
+- `05-webhook-notification.png`, `webhook-notification.txt` — genuine firing + resolved
+  webhook payloads.
 
-## alerting/
+### github-actions/
+- `01-successful-run.png` — successful run `44905993282` (Validate + Deploy).
+- `02-failed-run.png` — failed run `44905470131` (intentionally invalid rule).
 
-- `01-alertmanager-ui.png` — Alertmanager showing loaded rules/receivers.
-- `02-alert-firing.png` — an alert in **Firing** state (e.g. after stopping the
-  backend or breaking the frontend probe).
-- `03-telegram-notification.png` — the Telegram message for a firing alert.
-- `04-alert-resolved.png` — the resolved notification / resolved alert state.
+## Pending (user-only)
 
-## github-actions/
-
-- `01-successful-run.png` — a green **Validate configuration** run (PR or push).
-- `02-failed-run.png` — a red run caused by intentionally invalid configuration on a
-  throwaway branch (see `docs/cicd.md` §5).
-- `03-deploy-run.png` — the deploy job running on `main` (PART B).
-
-> Do not fabricate screenshots. Capture them from the real running stack.
+- `alerting/03-telegram-notification.png` — requires the user's Telegram bot token and
+  chat id, then a real alert to capture the Telegram message.

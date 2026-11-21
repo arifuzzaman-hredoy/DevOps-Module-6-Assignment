@@ -8,7 +8,7 @@ dashboard or data source).
 ### 1.1 Deployment
 
 - Service `grafana` (`grafana/grafana-oss:11.4.0`) in `docker-compose.yml`.
-- Published on loopback `${GRAFANA_PORT}` (default 3000).
+- Published on `0.0.0.0:3000` in this deployment (admin `/24` only).
 - Admin credentials from `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` in `.env`.
 - Dashboards and database persist in the `nexora-monitoring-grafana-data` volume.
 - Provisioning is mounted read-only from `grafana/provisioning/`.

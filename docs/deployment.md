@@ -76,16 +76,19 @@ PASS: grafana-health     (http://127.0.0.1:3000/api/health) -> 200
 
 ## 5. Access the UIs
 
-Because the UIs bind to loopback, use an SSH tunnel from your workstation:
+Prometheus and Alertmanager bind to loopback; Grafana binds to `0.0.0.0:3000` and is
+restricted by the security group to the admin `/24`.
+
+- **Grafana:** http://3.25.110.229:3000 (admin IP only)
+- **Prometheus / Alertmanager:** use an SSH tunnel from your workstation:
 
 ```bash
-ssh -L 9090:127.0.0.1:9090 -L 3000:127.0.0.1:3000 -L 9093:127.0.0.1:9093 <user>@<web-tier-host>
+ssh -L 9090:127.0.0.1:9090 -L 9093:127.0.0.1:9093 <user>@<ec2-host>
 ```
 
 Then open:
 
 - Prometheus: http://127.0.0.1:9090 (Status → Targets: all should be UP)
-- Grafana: http://127.0.0.1:3000
 - Alertmanager: http://127.0.0.1:9093
 
 To expose Grafana publicly instead, put it behind the existing Nginx with TLS and
@@ -148,7 +151,7 @@ docker compose logs -f grafana
 ## 10. Security checklist
 
 - `.env` is git-ignored and contains real secrets; never commit it.
-- UIs bind to loopback by default; use SSH tunnels or Nginx + TLS + auth.
+- Prometheus/Alertmanager bind to loopback (SSH tunnel); Grafana is on `0.0.0.0:3000` restricted to the admin `/24`; add TLS/auth before exposing Grafana more widely.
 - Exporters are not published.
 - Database monitoring uses a least-privilege role (`pg_monitor` only).
 - Rotate the Grafana admin password and Telegram bot token if exposed.
