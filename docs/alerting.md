@@ -98,24 +98,18 @@ The Telegram bot and credentials are already configured on the deployment host:
   `640` (group `nogroup`).
 - The token is valid: `getMe` returns `ok: true` for `@granfana_alert_manager_bot`.
 
-**Current blocker:** Telegram returns **`chat not found (400)`** for the configured
-chat, and `getUpdates` is empty — the user has never started a conversation with the
-bot. Telegram bots cannot initiate a private chat.
+**Status: verified.** The configured chat matches the user's private chat (confirmed via
+`getUpdates`). After the user started the bot, Alertmanager delivered **2 successful
+Telegram notifications** (firing + resolved) with **0 failures**:
 
-**To finish (user action):**
+```text
+alertmanager_notification_requests_total{integration="telegram"} 2
+alertmanager_notifications_total{integration="telegram"} 2
+alertmanager_notification_requests_failed_total{integration="telegram"} 0
+```
 
-1. Open Telegram, find **@granfana_alert_manager_bot**, and send `/start` (or any message).
-2. Re-render/restart if needed:
-
-   ```bash
-   cd /opt/nexora/monitoring
-   RENDER_ENV_FILE=.env.deploy python3 scripts/render_config.py
-   docker compose --env-file .env.deploy -f docker-compose.yml -f docker-compose.m6.yml restart alertmanager
-   ```
-
-3. Trigger a test alert or the DB-outage test and confirm the firing and resolved
-   messages appear in the chat.
-4. Do not claim Telegram notifications work until a real message is received.
+Evidence: `screenshots/alerting/08-telegram-delivery-metrics.png` and
+`telegram-delivery-metrics.txt`. The Telegram chat screenshots are user-only.
 
 ## 5. Testing alerts without breaking production
 
@@ -138,12 +132,10 @@ webhook receiver (`scripts/webhook_listener.py`) and captures the firing and res
 payloads. The run received **2 firing + 2 resolved** webhook payloads, proving
 Alertmanager routing, grouping, and `send_resolved` work end to end.
 
-**Telegram:** the token is valid, but delivery currently fails with
-`telegram: chat not found (400)` because the user has not started the bot (see §4).
-The Alertmanager log of the actual `NexoraDatabaseDown` Telegram attempts is captured
-in `screenshots/alerting/database-alert-log.txt` and
-`07-telegram-delivery-attempts.png`. Telegram is **not** claimed to work until a real
-message is received.
+**Telegram:** delivery is **verified** — 2 successful notifications (firing + resolved),
+0 failures (`alertmanager_notifications_total{integration="telegram"} 2`,
+`alertmanager_notification_requests_failed_total{integration="telegram"} 0`). See
+`screenshots/alerting/08-telegram-delivery-metrics.png`.
 
 ## 7. Alert rule test
 
@@ -151,5 +143,8 @@ message is received.
 captures the result. Actual result: the **real `NexoraDatabaseDown`** alert fired
 (critical), the backend 5xx error ratio reached ≈ 33.8%, and the alert resolved after
 PostgreSQL was restored (Alertmanager API returned 0 alerts; app `/ready` returned
-`{"status":"ready"}`). Evidence: `screenshots/alerting/05-database-alert-firing.png`,
-`06-database-alert-resolved.png`, and `database-alert-log.txt`.
+`{"status":"ready"}`). Telegram delivery for this alert was confirmed by the
+Alertmanager metrics (2 successful sends, 0 failures). Evidence:
+`screenshots/alerting/05-database-alert-firing.png`,
+`06-database-alert-resolved.png`, `database-alert-log.txt`, and
+`08-telegram-delivery-metrics.png`.

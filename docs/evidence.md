@@ -117,12 +117,12 @@ Both the firing and the resolved payloads were received:
       2 "status":"resolved"
 ```
 
-> **Telegram:** the bot token is valid (bot `@granfana_alert_manager_bot`) and the
-> credentials are configured, but Telegram returns `chat not found (400)` because the
-> user has not started the bot. The Alertmanager log of the actual
-`NexoraDatabaseDown` Telegram attempts (firing + resolved) is captured in
-`screenshots/alerting/database-alert-log.txt` and `07-telegram-delivery-attempts.png`.
-> Telegram is **not** claimed to work until a real message is received.
+> **Telegram: verified.** After the user started the bot, Alertmanager delivered **2
+> successful Telegram notifications** (firing + resolved) with **0 failures**
+> (`alertmanager_notifications_total{integration="telegram"} 2`,
+> `alertmanager_notification_requests_failed_total{integration="telegram"} 0`). Evidence:
+> `screenshots/alerting/08-telegram-delivery-metrics.png` and
+> `telegram-delivery-metrics.txt`.
 
 ## 7. Grafana
 
@@ -158,9 +158,8 @@ deployment (and the public GitHub Actions pages):
 
 - `screenshots/prometheus/` — targets (6/6 UP) and the three PromQL queries.
 - `screenshots/grafana/` — datasource + health, Node Exporter Full (1860), Three-Tier App - Production.
-- `screenshots/alerting/` — Alertmanager UI; actual `NexoraDatabaseDown` firing (`05-database-alert-firing.png`) and resolved (`06-database-alert-resolved.png`); Telegram delivery-attempt log (`07-telegram-delivery-attempts.png`, `database-alert-log.txt`); webhook firing/resolved payloads.
+- `screenshots/alerting/` — Alertmanager UI; actual `NexoraDatabaseDown` firing (`05-database-alert-firing.png`) and resolved (`06-database-alert-resolved.png`); Telegram delivery-attempt log (`07-telegram-delivery-attempts.png`, `database-alert-log.txt`); Telegram delivery metrics (`08-telegram-delivery-metrics.png`, `telegram-delivery-metrics.txt`); webhook firing/resolved payloads.
 - `screenshots/github-actions/` — successful runs 44905993282 / 44909256927 and failed run 44905470131.
 
-The missing screenshots are the **Telegram chat** views
-(`03-telegram-firing.png`, `04-telegram-resolved.png`), which require the user to
-start `@granfana_alert_manager_bot` and then re-run the delivery test.
+The Telegram chat views (`03-telegram-firing.png`, `04-telegram-resolved.png`) are
+user-only; delivery is verified by `08-telegram-delivery-metrics.png`.

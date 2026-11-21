@@ -23,7 +23,8 @@ screenshots were fabricated.
 - `02-alert-firing.png` — `NexoraDatabaseDown` firing during the earlier deliberate outage.
 - `05-database-alert-firing.png` — actual `NexoraDatabaseDown` firing (re-verified).
 - `06-database-alert-resolved.png` — actual `NexoraDatabaseDown` resolved (Alertmanager UI shows no active alert; API returns 0 alerts).
-- `07-telegram-delivery-attempts.png`, `database-alert-log.txt` — genuine Alertmanager log of the `NexoraDatabaseDown` Telegram delivery attempts (firing + resolved). The log shows Telegram returning `chat not found` because the user has not started the bot.
+- `07-telegram-delivery-attempts.png`, `database-alert-log.txt` — genuine Alertmanager log of the `NexoraDatabaseDown` Telegram delivery attempts (firing + resolved). The log shows the earlier `chat not found` attempts and the later successful delivery.
+- `08-telegram-delivery-metrics.png`, `telegram-delivery-metrics.txt` — Alertmanager metrics proving **2 successful Telegram sends (firing + resolved), 0 failures**.
 - `04-alert-resolved.png`, `05-webhook-notification.png`, `webhook-notification.txt` — genuine firing + resolved webhook payloads.
 
 ### github-actions/
@@ -32,6 +33,6 @@ screenshots were fabricated.
 
 ## Pending (user-only)
 
-- `alerting/03-telegram-firing.png`, `alerting/04-telegram-resolved.png` — require the
-  user to open Telegram, start **@granfana_alert_manager_bot** (send `/start`), then
-  re-run the delivery test to capture the real Telegram messages.
+- `alerting/03-telegram-firing.png`, `alerting/04-telegram-resolved.png` — optional
+  Telegram chat views from the user's app. Delivery itself is verified by
+  `08-telegram-delivery-metrics.png` (2 successful sends, 0 failures).

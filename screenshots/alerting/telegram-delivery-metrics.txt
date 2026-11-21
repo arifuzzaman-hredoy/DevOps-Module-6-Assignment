@@ -1,0 +1,16 @@
+alertmanager_notification_latency_seconds_bucket{integration="telegram",le="1"} 1
+alertmanager_notification_latency_seconds_bucket{integration="telegram",le="5"} 2
+alertmanager_notification_latency_seconds_bucket{integration="telegram",le="10"} 2
+alertmanager_notification_latency_seconds_bucket{integration="telegram",le="15"} 2
+alertmanager_notification_latency_seconds_bucket{integration="telegram",le="20"} 2
+alertmanager_notification_latency_seconds_bucket{integration="telegram",le="+Inf"} 2
+alertmanager_notification_latency_seconds_sum{integration="telegram"} 1.533502555
+alertmanager_notification_latency_seconds_count{integration="telegram"} 2
+alertmanager_notification_requests_failed_total{integration="telegram"} 0
+alertmanager_notification_requests_total{integration="telegram"} 2
+alertmanager_notifications_failed_total{integration="telegram",reason="clientError"} 0
+alertmanager_notifications_failed_total{integration="telegram",reason="contextCanceled"} 0
+alertmanager_notifications_failed_total{integration="telegram",reason="contextDeadlineExceeded"} 0
+alertmanager_notifications_failed_total{integration="telegram",reason="other"} 0
+alertmanager_notifications_failed_total{integration="telegram",reason="serverError"} 0
+alertmanager_notifications_total{integration="telegram"} 2
