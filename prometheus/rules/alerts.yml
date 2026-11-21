@@ -9,7 +9,7 @@ groups:
   - name: nexora-availability
     rules:
       - alert: NexoraBackendDown
-        expr: up{job="nexora-backend"} == 0
+        expr: up{job="nexora-backend" ====
         for: 2m
         labels:
           severity: critical
