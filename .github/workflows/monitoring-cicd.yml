@@ -37,35 +37,20 @@ jobs:
           ./scripts/validate.sh
 
   # ---------------------------------------------------------------------------
-  # Deploy to the Nexora web tier on pushes to main (PART B).
-  # Requires the DEPLOY_* GitHub Secrets. Never runs on pull requests.
+  # Deploy the monitoring stack on pushes to main using the self-hosted runner
+  # on the Nexora EC2 host. Never runs on pull requests.
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy monitoring stack
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, nexora]
     needs: validate
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: production
     steps:
-      - name: Deploy over SSH
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Deploy monitoring stack
         run: |
-          if [ -z "${DEPLOY_HOST:-}" ] || [ -z "${DEPLOY_SSH_KEY:-}" ]; then
-            echo "Deployment secrets are not configured; skipping deploy."
-            echo "Set DEPLOY_HOST, DEPLOY_USER, DEPLOY_PORT, DEPLOY_PATH, DEPLOY_SSH_KEY in GitHub Secrets."
-            exit 0
-          fi
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq sshpass >/dev/null 2>&1 || true
-          mkdir -p ~/.ssh
-          echo "${DEPLOY_SSH_KEY}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "${DEPLOY_PORT:-22}" "${DEPLOY_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
-          ssh -i ~/.ssh/deploy_key -p "${DEPLOY_PORT:-22}" \
-            "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "cd '${DEPLOY_PATH}' && git fetch --all && git reset --hard origin/main && ENV_FILE=.env.deploy ./scripts/deploy.sh"
+          set -euo pipefail
+          cd /opt/nexora/monitoring
+          git fetch --all
+          git reset --hard origin/main
+          ENV_FILE=.env.deploy ./scripts/deploy.sh
