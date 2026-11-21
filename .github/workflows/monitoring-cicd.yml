@@ -42,7 +42,7 @@ jobs:
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy monitoring stack
-    runs-on: [self-hosted, nexora]
+    runs-on: [self-hosted, linux, x64]
     needs: validate
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: production
