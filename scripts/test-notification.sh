@@ -27,18 +27,19 @@ curl -s -X POST "$AM/api/v2/alerts" -H 'Content-Type: application/json' -d '[
   {"labels":{"alertname":"TestWebhook","severity":"test","tier":"test"},
    "annotations":{"summary":"firing notification test","description":"verifies Alertmanager webhook delivery"}}
 ]'
-sleep 8
+sleep 10
 echo "==> Webhook log after firing:"
 cat "$LOG"
 
 echo
-echo "==> Resolving test alert"
-curl -s -X POST "$AM/api/v2/alerts" -H 'Content-Type: application/json' -d '[
-  {"labels":{"alertname":"TestWebhook","severity":"test","tier":"test"},
-   "annotations":{"summary":"resolved notification test"},
-   "endsAt":"2000-01-01T00:00:00Z"}
-]'
-sleep 8
+ENDS="$(date -u -d '+8 seconds' +%Y-%m-%dT%H:%M:%SZ)"
+echo "==> Resolving test alert (endsAt=$ENDS)"
+RESOLVE_PAYLOAD="$(cat <<EOF
+[{"labels":{"alertname":"TestWebhook","severity":"test","tier":"test"},"annotations":{"summary":"resolved notification test"},"endsAt":"$ENDS"}]
+EOF
+)"
+curl -s -X POST "$AM/api/v2/alerts" -H 'Content-Type: application/json' -d "$RESOLVE_PAYLOAD"
+sleep 20
 echo "==> Webhook log after resolved:"
 cat "$LOG"
 
