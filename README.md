@@ -39,7 +39,7 @@ The assignment has seven tasks worth 100 marks in total:
 | 4 — Three-tier application dashboard | 20 | §14; `grafana/dashboards/three-tier-production.json` |
 | 5 — Alerting | 20 | §15, §16; `prometheus/rules/alerts.yml`, `alertmanager/` |
 | 6 — GitHub CI/CD | 15 | §18, §19; `.github/workflows/monitoring-cicd.yml` |
-| 7 — Final documentation & evidence task | 10 | README, `docs/`, §23–§24, `screenshots/` |
+| 7 — Questions | 10 | §23 (Q1–Q4) |
 | **Total** | **100** | |
 
 Grafana Setup (Task 2) and the Community Dashboard (Task 3) are marked together for 20 marks.
