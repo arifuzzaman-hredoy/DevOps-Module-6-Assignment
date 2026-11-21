@@ -1,9 +1,19 @@
 # Grafana
 
-## 1. Provisioning
+## 1. Grafana setup (Task 2)
 
 Grafana is configured entirely as code (no manual clicking required for the custom
-dashboard or data source):
+dashboard or data source).
+
+### 1.1 Deployment
+
+- Service `grafana` (`grafana/grafana-oss:11.4.0`) in `docker-compose.yml`.
+- Published on loopback `${GRAFANA_PORT}` (default 3000).
+- Admin credentials from `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` in `.env`.
+- Dashboards and database persist in the `nexora-monitoring-grafana-data` volume.
+- Provisioning is mounted read-only from `grafana/provisioning/`.
+
+### 1.2 Provisioned files
 
 | File | Effect |
 |---|---|
@@ -11,7 +21,32 @@ dashboard or data source):
 | `grafana/provisioning/dashboards/provider.yml` | Loads every JSON file in `/var/lib/grafana/dashboards` into the `Nexora` folder |
 | `grafana/dashboards/three-tier-production.json` | The custom dashboard |
 
-Admin credentials come from `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` in `.env`.
+### 1.3 Prometheus datasource configuration
+
+`grafana/provisioning/datasources/prometheus.yml` defines:
+
+| Setting | Value |
+|---|---|
+| Name | `Prometheus` |
+| Type | `prometheus` |
+| URL | `http://prometheus:9090` |
+| Access | `proxy` |
+| Default | yes |
+| HTTP method | POST |
+
+### 1.4 Datasource connection verification
+
+After `docker compose up -d`:
+
+1. **UI:** Grafana → **Connections → Data sources → Prometheus → Test** → expect
+   "Data source is working".
+2. **API:** `curl -u admin:$GRAFANA_ADMIN_PASSWORD http://127.0.0.1:3000/api/datasources`
+   lists the `Prometheus` entry; `GET /api/datasources/uid/<uid>/health` returns
+   `"status": "OK"`.
+3. **Explore:** Grafana → **Explore** → `Prometheus` → run `up`; series confirm the
+   proxy path works.
+4. **Targets:** Prometheus → **Status → Targets** must show `UP` before dashboards
+   render data.
 
 ## 2. Community dashboard — server health
 

@@ -27,6 +27,23 @@ deployment. Backend instrumentation is delivered as a separate, documented patch
 | Target repository | `https://github.com/arifuzzaman-hredoy/DevOps-Module-6-Assignment` |
 | License | MIT |
 
+### Task coverage and marks
+
+The assignment has seven tasks worth 100 marks in total:
+
+| Task | Marks | Where addressed |
+|---|---|---|
+| 1 — Prometheus setup | 15 | §9, §10, §11; `prometheus/`, `docs/prometheus.md` |
+| 2 — Grafana setup | 10 | §12; `grafana/provisioning/`, `docs/grafana.md` |
+| 3 — Community dashboard | 10 | §13; `docs/grafana.md` §2 |
+| 4 — Three-tier application dashboard | 20 | §14; `grafana/dashboards/three-tier-production.json` |
+| 5 — Alerting | 20 | §15, §16; `prometheus/rules/alerts.yml`, `alertmanager/` |
+| 6 — GitHub CI/CD | 15 | §18, §19; `.github/workflows/monitoring-cicd.yml` |
+| 7 — Final documentation & evidence task | 10 | README, `docs/`, §23–§24, `screenshots/` |
+| **Total** | **100** | |
+
+Grafana Setup (Task 2) and the Community Dashboard (Task 3) are marked together for 20 marks.
+
 ## 3. Project objectives
 
 - Monitor all three tiers (frontend, backend API, database) plus the host.
@@ -181,6 +198,11 @@ Scrape interval 15s; evaluation 15s; retention 15d. Full details:
 | postgres_exporter | DB metrics via least-privilege `nexora_monitoring` role (`pg_monitor`) | internal only |
 | Blackbox Exporter | HTTP probes (frontend URL, backend `/ready`) | internal only |
 
+> **Node Exporter scope:** it currently monitors **only the web-tier monitoring host**
+> where the stack runs — **not** all three EC2 instances. To monitor the app and
+> database hosts as well, run one Node Exporter per instance and add each host to the
+> `node` job in `prometheus/prometheus.yml` (see `docs/nexora-integration.md` §2.3).
+
 Setup and the least-privilege SQL: [`exporters/README.md`](exporters/README.md) and
 `exporters/postgres-monitor-role.sql`.
 
@@ -212,7 +234,54 @@ clamp_min(sum(pg_settings_max_connections{job="postgres"})
 ```
 Expected: e.g. `0.08` (8% of usable connections).
 
-## 12. Community dashboard
+## 12. Grafana setup (Task 2 — 10 marks)
+
+Grafana is deployed as part of the `nexora-monitoring` Compose stack and configured
+entirely as code.
+
+### 12.1 Grafana deployment
+
+- Service: `grafana` (`grafana/grafana-oss:11.4.0`) in `docker-compose.yml`.
+- Published on loopback `${GRAFANA_PORT}` (default 3000); reachable via SSH tunnel or
+  the existing Nginx with TLS/auth.
+- Admin credentials from `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` in `.env`.
+- Provisioning is mounted read-only from `grafana/provisioning/`.
+- Dashboards and database persist in the `nexora-monitoring-grafana-data` volume.
+
+### 12.2 Prometheus datasource configuration
+
+`grafana/provisioning/datasources/prometheus.yml` provisions the data source
+automatically:
+
+| Setting | Value |
+|---|---|
+| Name | `Prometheus` |
+| Type | `prometheus` |
+| URL | `http://prometheus:9090` (container DNS on the monitoring network) |
+| Access | `proxy` (browser → Grafana → Prometheus) |
+| Default | yes |
+| HTTP method | POST (better for large queries) |
+
+### 12.3 Datasource connection verification
+
+After `docker compose up -d`, verify the datasource connection:
+
+1. **UI:** Grafana → **Connections → Data sources → Prometheus → Test**. A green
+   "Data source is working" banner confirms connectivity.
+2. **API:** `curl -u admin:$GRAFANA_ADMIN_PASSWORD http://127.0.0.1:3000/api/datasources`
+   lists the provisioned `Prometheus` entry, and
+   `GET /api/datasources/uid/<uid>/health` returns `"status": "OK"`.
+3. **Explore:** Grafana → **Explore**, select the `Prometheus` datasource, and run
+   `up`; returned series confirm the proxy path works.
+4. **Targets:** Prometheus → **Status → Targets** must show targets `UP` before
+   dashboards can display data.
+
+This verifies Task 2 end to end: Grafana is deployed, the Prometheus datasource is
+configured, and the connection is confirmed.
+
+Details: [`docs/grafana.md`](docs/grafana.md).
+
+## 13. Community dashboard
 
 | Field | Value |
 |---|---|
@@ -224,7 +293,7 @@ Expected: e.g. `0.08` (8% of usable connections).
 
 Details: [`docs/grafana.md`](docs/grafana.md) §2.
 
-## 13. Custom dashboard
+## 14. Custom dashboard
 
 **Exact name:** `Three-Tier App - Production` (`grafana/dashboards/three-tier-production.json`)
 
@@ -235,7 +304,7 @@ Details: [`docs/grafana.md`](docs/grafana.md) §2.
 
 Panel map: [`docs/grafana.md`](docs/grafana.md) §3.
 
-## 14. Alert rules
+## 15. Alert rules
 
 12 rules in 4 groups (`prometheus/rules/alerts.yml`):
 
@@ -248,7 +317,7 @@ Panel map: [`docs/grafana.md`](docs/grafana.md) §3.
 
 Thresholds and `for` durations: [`docs/alerting.md`](docs/alerting.md) §1.
 
-## 15. Notification setup
+## 16. Notification setup
 
 Alertmanager routes to **Telegram** (preferred) with `send_resolved: true`, optional
 SMTP email, grouping, and inhibition. Secrets come from the environment, never git.
@@ -263,7 +332,7 @@ Manual steps (PART B): [`docs/alerting.md`](docs/alerting.md) §4. In short:
 
 > Notifications are **not** claimed to work until a real message is received (PART B).
 
-## 16. Docker Compose deployment
+## 17. Docker Compose deployment
 
 ```bash
 cp .env.example .env          # fill in real values
@@ -277,7 +346,7 @@ Services: `prometheus`, `grafana`, `alertmanager`, `node-exporter`,
 `postgres-exporter`, `blackbox-exporter`. Full guide:
 [`docs/deployment.md`](docs/deployment.md).
 
-## 17. GitHub Actions CI/CD
+## 18. GitHub Actions CI/CD
 
 `.github/workflows/monitoring-cicd.yml`:
 
@@ -288,7 +357,7 @@ Services: `prometheus`, `grafana`, `alertmanager`, `node-exporter`,
 
 Details: [`docs/cicd.md`](docs/cicd.md).
 
-## 18. Required GitHub Secrets
+## 19. Required GitHub Secrets
 
 | Secret | Purpose |
 |---|---|
@@ -301,7 +370,7 @@ Details: [`docs/cicd.md`](docs/cicd.md).
 Runtime secrets (Telegram, SMTP, DB DSN, Grafana password) live in the server's
 git-ignored `.env.deploy`.
 
-## 19. Configuration validation
+## 20. Configuration validation
 
 ```bash
 ./scripts/validate.sh
@@ -312,7 +381,7 @@ Compose (`docker compose config`), Grafana dashboard JSON, generic YAML, shell
 syntax, secret scan, and (if installed) actionlint. Tools are downloaded on first
 run into `.cache/tools`.
 
-## 20. Troubleshooting
+## 21. Troubleshooting
 
 | Symptom | Check |
 |---|---|
@@ -325,7 +394,7 @@ run into `.cache/tools`.
 
 More: [`docs/deployment.md`](docs/deployment.md) §9.
 
-## 21. Security considerations
+## 22. Security considerations
 
 - No hardcoded credentials; secrets via `.env` / GitHub Secrets only.
 - `.env` is git-ignored; `.env.example` has placeholders only.
@@ -334,7 +403,7 @@ More: [`docs/deployment.md`](docs/deployment.md) §9.
 - Backend `/metrics` should not be publicly exposed.
 - CI uses `permissions: contents: read`; deploy is gated to `push` on `main`.
 
-## 22. Assignment questions and answers
+## 23. Assignment questions and answers
 
 ### Q1. Pull vs push model; which does Prometheus use?
 
@@ -369,9 +438,9 @@ built on top of observable data.
 
 Follow the request path, from the user inward, checking one tier at a time:
 
-1. **Frontend availability / probe duration** — is the site even up, and how long
-   does the blackbox HTTP probe take? A slow/failed probe points at the edge/DNS/TLS
-   before touching the app.
+1. **Frontend Availability / Frontend Health (HTTP Status)** — is the site even up,
+   and is the public endpoint returning HTTP 200? A failed or non-200 blackbox probe
+   points at the edge/DNS/TLS before touching the app.
 2. **Backend API response time (p50/p95) and request rate** — is the API itself slow?
    High p95 with normal rate suggests app/DB latency; a request-rate spike suggests a
    traffic surge.
@@ -379,8 +448,9 @@ Follow the request path, from the user inward, checking one tier at a time:
    (retries, timeouts)?
 4. **Database: active connections and connection usage** — saturation or lock
    contention makes every request slow; check connections vs max.
-5. **Server resources: CPU, memory, disk I/O** — resource exhaustion (CPU steal,
-   memory pressure, disk I/O wait) explains broad slowness across the backend.
+5. **Server resources: CPU Utilization, Memory Utilization, Disk Utilization** —
+   resource exhaustion (CPU saturation, memory pressure, low disk space) explains
+   broad slowness across the backend.
 
 Order rationale: isolate the failing tier first (frontend vs backend vs DB), then
 drill into the most specific signal, then confirm with host resources. This avoids
@@ -408,13 +478,13 @@ How this project avoids it:
 - **Resolved notifications** so alerts close themselves and do not linger.
 - **Validated rules** in CI (`promtool`) so broken/noisy rules never ship.
 
-## 23. Evidence / screenshots
+## 24. Evidence / screenshots
 
 PART A contains no runtime screenshots (nothing is deployed yet). PART B captures
 Prometheus targets, PromQL queries, both Grafana dashboards, alert firing/resolved,
 Telegram delivery, and CI runs. Checklist: [`screenshots/README.md`](screenshots/README.md).
 
-## 24. References
+## 25. References
 
 - Prometheus documentation — https://prometheus.io/docs/
 - Prometheus alerting rules — https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
